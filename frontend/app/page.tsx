@@ -2,19 +2,18 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AutoAuditView } from "../components/autoaudit/Views";
-import { seedInspections } from "../lib/mock-data";
-import { autoAuditApi, checkBackendHealth, type InspectApiResponse } from "../lib/api";
-import type { AuditLog, InspectionUploadLog, InspectorReview, Inspection } from "../lib/types";
+import { checkBackendHealth, type InspectApiResponse } from "../lib/api";
+import type { InspectionUploadLog } from "../lib/types";
+import { saveStoredInspection } from "../lib/inspection-store";
 
-type ViewName = "Plant Overview" | "AI Inspection Studio" | "Batch Quality Analytics" | "Fault Intelligence Board" | "Human Review" | "Inspection Log";
-type IconName = "grid" | "disc" | "box" | "chart" | "activity" | "log";
+type ViewName = "AI Inspection Studio" | "Plant Overview" | "Batch Quality Analytics" | "Fault Intelligence Board" | "Human Review";
+type IconName = "grid" | "disc" | "box" | "chart";
 const navigation: { label: ViewName; icon: IconName }[] = [
-  { label: "Plant Overview", icon: "grid" },
   { label: "AI Inspection Studio", icon: "disc" },
+  { label: "Plant Overview", icon: "grid" },
   { label: "Batch Quality Analytics", icon: "box" },
   { label: "Fault Intelligence Board", icon: "chart" },
-  { label: "Human Review", icon: "activity" },
-  { label: "Inspection Log", icon: "log" },
+  { label: "Human Review", icon: "chart" },
 ];
 
 function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
@@ -23,17 +22,14 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
     disc: <><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v6m9 3h-6m-3 9v-6m-9-3h6"/></>,
     box: <><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 8 9 5 9-5m-18 0v9l9 5 9-5V8m-9 5v9"/></>,
     chart: <><path d="M3 3v18h18"/><path d="m7 14 4-4 4 3 6-7"/></>,
-    activity: <><path d="M3 12h4l3-8 4 16 3-8h4"/></>,
-    log: <><path d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M14 3v5h5M8 12h8m-8 4h8"/></>,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
 
 export default function Home() {
-  const [active, setActive] = useState<ViewName>("Plant Overview");
-  const [inspections, setInspections] = useState<Inspection[]>(seedInspections);
+  const [active, setActive] = useState<ViewName>("AI Inspection Studio");
   const [uploadLogs, setUploadLogs] = useState<InspectionUploadLog[]>([]);
-  const [selectedPart, setSelectedPart] = useState("BD-1047");
+  const [selectedPart, setSelectedPart] = useState("");
   const [clock, setClock] = useState("");
   const [notice, setNotice] = useState("");
   const [backend, setBackend] = useState<{ isOnline: boolean; mode: string } | null>(null);
@@ -41,15 +37,10 @@ export default function Home() {
 
   useEffect(() => {
     void checkBackendHealth().then(setBackend);
-    if (autoAuditApi !== undefined && process.env.NEXT_PUBLIC_AUTOAUDIT_API === "http") {
-      void autoAuditApi.listInspections().then(setInspections).catch(() => setNotice("Backend provider is selected but /api/inspections is not available."));
-    }
     try {
-      const saved = window.localStorage.getItem("autoaudit-inspections-v2");
-      if (saved) setInspections(JSON.parse(saved) as Inspection[]);
       const savedUploadLogs = window.localStorage.getItem("autoaudit-upload-log-v1");
-      if (savedUploadLogs) setUploadLogs(JSON.parse(savedUploadLogs) as InspectionUploadLog[]);
-    } catch { /* Keep the bundled demo fixtures if local storage is unavailable. */ }
+      if (savedUploadLogs) { const logs = JSON.parse(savedUploadLogs) as InspectionUploadLog[]; setUploadLogs(logs); const requestedPart = new URL(window.location.href).searchParams.get("part"); if (!requestedPart && logs[0]) setSelectedPart(logs[0].id); }
+    } catch { /* Continue with an empty history if local storage is unavailable. */ }
     const url = new URL(window.location.href);
     const view = navigation.find((item) => item.label === url.searchParams.get("view"))?.label;
     if (view) setActive(view);
@@ -61,20 +52,18 @@ export default function Home() {
     const onPopState = () => {
       const next = new URL(window.location.href);
       const page = navigation.find((item) => item.label === next.searchParams.get("view"))?.label;
-      if (page) setActive(page); else setActive("Plant Overview");
-      setSelectedPart(next.searchParams.get("part") ?? "BD-1047");
+      if (page) setActive(page); else setActive("AI Inspection Studio");
+      setSelectedPart(next.searchParams.get("part") ?? "");
     };
     window.addEventListener("popstate", onPopState);
     return () => { window.clearInterval(timer); window.removeEventListener("popstate", onPopState); };
   }, []);
 
-  const addLiveInspection = useCallback((row: Inspection, response: InspectApiResponse) => {
-    const updated = [row, ...inspections.filter((entry) => entry.id !== row.id)];
-    setInspections(updated);
-    try { window.localStorage.setItem("autoaudit-inspections-v2", JSON.stringify(updated)); } catch { /* Keep this inspection in current-session state. */ }
+  const addLiveInspection = useCallback(async (response: InspectApiResponse, thumbnailDataUrl: string, file: File) => {
+    try { await saveStoredInspection(response.image_id, file, response); } catch { setNotice("Inspection completed, but this browser could not save the full image for later reopening."); }
     const uploadLog: InspectionUploadLog = {
       id: response.image_id,
-      fileName: row.model,
+      fileName: file.name,
       uploadedAt: new Date().toISOString(),
       component: response.brake_component_type || "Brake component",
       result: response.overall_status,
@@ -85,6 +74,14 @@ export default function Home() {
       inferenceMode: response.inference_mode,
       modelName: response.model_name,
       summary: response.summary_message,
+      thumbnailDataUrl,
+      defectType: response.detections[0]?.defect_type ?? "No defect detected",
+      confidence: response.detections[0]?.confidence ?? response.condition_classification.confidence,
+      stationOrigin: response.top_fmea_risk?.station_origin ?? response.top_fmea_risk?.station ?? response.fmea_quality_control?.critical_station,
+      rpn: response.top_fmea_risk?.rpn ?? response.fmea_quality_control?.highest_rpn,
+      requiresHumanReview: response.detections.some((detection) => /unknown anomaly/i.test(detection.defect_type) || detection.is_unknown_anomaly === true || detection.confidence < 0.5),
+      topFmeaRisk: response.top_fmea_risk,
+      fmeaQualityControl: response.fmea_quality_control,
       detections: response.detections.map((detection) => ({
         defectType: detection.defect_type,
         confidence: detection.confidence,
@@ -95,20 +92,24 @@ export default function Home() {
         explanation: detection.explanation,
         recommendation: detection.recommendation,
         maskPolygon: detection.mask_polygon ?? undefined,
+        fmea: detection.fmea,
       })),
     };
     const updatedLogs = [uploadLog, ...uploadLogs.filter((entry) => entry.id !== uploadLog.id)].slice(0, 100);
     setUploadLogs(updatedLogs);
     try { window.localStorage.setItem("autoaudit-upload-log-v1", JSON.stringify(updatedLogs)); } catch { /* Keep current-session log if browser storage is unavailable. */ }
-    setSelectedPart(row.id);
-    const url = new URL(window.location.href); url.searchParams.set("part", row.id); window.history.replaceState({}, "", url);
-    if (response.condition_classification.condition === "FAULTY" || response.overall_status === "REJECT") {
+    setSelectedPart(response.image_id);
+    const url = new URL(window.location.href); url.searchParams.set("part", response.image_id); window.history.replaceState({}, "", url);
+    if (uploadLog.requiresHumanReview) {
+      setQualityAlert("Unclassified Visual Anomaly Spotted — Quarantined for Expert Evaluation");
+      window.setTimeout(() => setQualityAlert(""), 12_000);
+    } else if (response.condition_classification.condition === "FAULTY" || response.overall_status === "REJECT") {
       const actualClasses = [...new Set(response.detections.map((detection) => detection.defect_type))];
       const finding = actualClasses.length ? actualClasses.join(", ") : "backend condition assessment";
       setQualityAlert(`Inspection ${response.image_id}: ${finding} flagged · disposition ${response.overall_status}. Review the returned findings; no machine cause was identified.`);
       window.setTimeout(() => setQualityAlert(""), 12_000);
     }
-  }, [inspections, uploadLogs]);
+  }, [uploadLogs]);
 
   const selectPart = useCallback((id: string) => {
     setSelectedPart(id);
@@ -121,28 +122,21 @@ export default function Home() {
     window.history.pushState({}, "", url);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
-  const saveReview = useCallback((id: string, review: InspectorReview) => {
-    const updated = inspections.map((row) => row.id === id ? { ...row, review, status: review.finalDisposition } : row);
-    setInspections(updated);
-    try { window.localStorage.setItem("autoaudit-inspections-v2", JSON.stringify(updated)); } catch { /* Current-session state remains updated. */ }
-    const log: AuditLog = { id: crypto.randomUUID(), partId: id, action: "Human review saved", actor: review.reviewer, timestamp: review.timestamp, details: `${review.originalClass} / ${review.originalDisposition} → ${review.finalClass} / ${review.finalDisposition}; reason: ${review.reason}` };
-    try { const oldLog = JSON.parse(window.localStorage.getItem("autoaudit-audit-log-v2") ?? "[]") as AuditLog[]; window.localStorage.setItem("autoaudit-audit-log-v2", JSON.stringify([log, ...oldLog].slice(0, 100))); } catch { /* Audit detail stays represented in the persisted review record. */ }
-    void autoAuditApi.saveReview(id, review).catch(() => setNotice("Review saved locally; backend persistence is not available."));
-  }, [inspections]);
+
 
   return <main className={`app-shell ${active === "AI Inspection Studio" ? "inspection-mode" : ""}`}>
     <aside className="sidebar">
       <a className="brand" href="?view=Plant%20Overview" onClick={(e) => { e.preventDefault(); navigate("Plant Overview"); }}><span className="brand-mark"><Icon name="disc" size={21}/></span><span className="brand-copy"><strong>autoaudit</strong><small>QUALITY OPERATIONS</small></span></a>
-      <div className="plant-select"><span className="plant-dot"/><span><b>Plant North · 01</b><small>Manufacturing campus</small></span><span className="plant-chevron">⌄</span></div>
+      <div className="plant-select"><span className="plant-dot"/><span><b>Inspection workspace</b><small>Live backend results</small></span></div>
       <div className="nav-heading">WORKSPACE</div>
-      <nav className="primary-nav" aria-label="Main navigation">{navigation.map((item) => <button key={item.label} className={`nav-link ${active === item.label ? "selected" : ""}`} onClick={() => navigate(item.label)} aria-label={item.label} title={item.label} aria-current={active === item.label ? "page" : undefined}><Icon name={item.icon}/><span>{item.label}</span>{item.label === "Human Review" && <span className="nav-count">{inspections.filter((row) => row.status === "REVIEW").length}</span>}</button>)}</nav>
-      <div className="sidebar-bottom"><div className="support-card"><div className="support-icon"><Icon name="activity" size={17}/></div><div><strong>Demo workspace</strong><span>Mock provider connected</span></div><span className="online-dot"/></div><div className="user-card"><div className="avatar">AR</div><div className="user-meta"><b>Alex Rivera</b><span>Quality manager</span></div><span className="user-role">DEMO</span></div></div>
+      <nav className="primary-nav" aria-label="Main navigation">{navigation.map((item) => <button key={item.label} className={`nav-link ${active === item.label ? "selected" : ""}`} onClick={() => navigate(item.label)} aria-label={item.label} title={item.label} aria-current={active === item.label ? "page" : undefined}><Icon name={item.icon}/><span>{item.label}</span></button>)}</nav>
+      <div className="sidebar-bottom"><div className="support-card"><div className="support-icon"><Icon name="chart" size={17}/></div><div><strong>AutoAudit workspace</strong><span>{backend?.isOnline ? "Inspection backend connected" : "Backend status unavailable"}</span></div><span className="online-dot"/></div><div className="user-card"><div className="avatar">AA</div><div className="user-meta"><b>AutoAudit</b><span>Quality workspace</span></div></div></div>
     </aside>
     <section className="content-area">
-      <header className="topbar"><div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><b>{active}</b></div><div className="top-actions"><span className="aa-top-demo">{backend?.isOnline ? (backend.mode === "real_ai" ? "REAL YOLO AI" : "BACKEND · MOCK") : "DEMO DATA"}</span><button className="button button-secondary small-button" onClick={() => { if (window.confirm("Reset local demo reviews and audit history? Uploaded image history will stay in the Inspection Log.")) { setInspections(seedInspections); window.localStorage.removeItem("autoaudit-inspections-v2"); window.localStorage.removeItem("autoaudit-audit-log-v2"); setNotice("Local demo reviews and audit history reset. Upload history was kept."); window.setTimeout(() => setNotice(""), 4500); } }}>Reset demo</button><button className="icon-button notification-button" aria-label="Show data-source details" onClick={() => { setNotice(backend?.isOnline ? `FastAPI backend online · ${backend.mode}` : "Backend offline. Local demonstration fixtures remain available."); window.setTimeout(() => setNotice(""), 4500); }}>ⓘ</button><div className="top-divider"/><div className="top-date"><span className="date-label">{clock ? clock.split(", ").slice(0, 2).join(", ").toUpperCase() : "LOCAL PLANT TIME"}</span><b>{clock ? clock.split(", ").at(-1) : "--:--"} <span>IST</span></b></div></div></header>
-      {backend && !backend.isOnline && <div className="aa-backend-warning" role="status"><span>Backend offline on :8000 — operating in local demonstration mode</span><button className="button button-secondary small-button" onClick={() => { setBackend(null); void checkBackendHealth().then(setBackend); }}>Retry connection</button></div>}
-      {qualityAlert && <div className="aa-quality-alert" role="alert"><b>{qualityAlert}</b><button aria-label="Dismiss critical defect alert" onClick={() => setQualityAlert("")}>×</button></div>}
-      <div className="page-content"><div className={active === "AI Inspection Studio" ? "" : "aa-persistent-inspector-hidden"}><AutoAuditView view="AI Inspection Studio" inspections={inspections} uploadLogs={uploadLogs} selectedPart={selectedPart} setSelectedPart={selectPart} navigate={navigate} saveReview={saveReview} backendOnline={backend?.isOnline ?? false} inferenceMode={backend?.mode ?? "offline"} onInspectionCreated={addLiveInspection}/></div>{active !== "AI Inspection Studio" && <AutoAuditView view={active} inspections={inspections} uploadLogs={uploadLogs} selectedPart={selectedPart} setSelectedPart={selectPart} navigate={navigate} saveReview={saveReview} backendOnline={backend?.isOnline ?? false} inferenceMode={backend?.mode ?? "offline"} onInspectionCreated={addLiveInspection}/>}<footer className="page-footer"><span>AutoAudit <span>·</span> Manufacturing quality, in focus</span><span>{backend?.isOnline ? "LIVE INSPECTION · DEMO OPERATIONS DATA" : "LOCAL DEMONSTRATION DATA · NOT FOR PRODUCTION DISPOSITION"}</span></footer></div>
+      <header className="topbar"><div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><b>{active}</b></div><div className="top-actions"><span className="aa-top-demo">{backend?.isOnline ? (backend.mode === "real_ai" ? "REAL YOLO AI" : "BACKEND · MOCK") : "BACKEND OFFLINE"}</span><button className="icon-button notification-button" aria-label="Show data-source details" onClick={() => { setNotice(backend?.isOnline ? `FastAPI backend online · ${backend.mode}` : "Backend offline. Live image inspection is unavailable until reconnection."); window.setTimeout(() => setNotice(""), 4500); }}>ⓘ</button><div className="top-divider"/><div className="top-date"><span className="date-label">{clock ? clock.split(", ").slice(0, 2).join(", ").toUpperCase() : "LOCAL PLANT TIME"}</span><b>{clock ? clock.split(", ").at(-1) : "--:--"} <span>IST</span></b></div></div></header>
+      {backend && !backend.isOnline && <div className="aa-backend-warning" role="status"><span>Backend offline on :8000 — live image inspection is unavailable until reconnection</span><button className="button button-secondary small-button" onClick={() => { setBackend(null); void checkBackendHealth().then(setBackend); }}>Retry connection</button></div>}
+      {qualityAlert && <div className={`aa-quality-alert ${qualityAlert.startsWith("Unclassified") ? "aa-anomaly-alert" : ""}`} role="alert"><b>{qualityAlert}</b><button aria-label="Dismiss critical defect alert" onClick={() => setQualityAlert("")}>×</button></div>}
+      <div className="page-content"><div className={active === "AI Inspection Studio" ? "" : "aa-persistent-inspector-hidden"}><AutoAuditView view="AI Inspection Studio" uploadLogs={uploadLogs} selectedPart={selectedPart} setSelectedPart={selectPart} navigate={navigate} backendOnline={backend?.isOnline ?? false} inferenceMode={backend?.mode ?? "offline"} onInspectionCreated={addLiveInspection}/></div>{active !== "AI Inspection Studio" && <AutoAuditView view={active} uploadLogs={uploadLogs} selectedPart={selectedPart} setSelectedPart={selectPart} navigate={navigate} backendOnline={backend?.isOnline ?? false} inferenceMode={backend?.mode ?? "offline"} onInspectionCreated={addLiveInspection}/>}<footer className="page-footer"><span>AutoAudit <span>·</span> Manufacturing quality, in focus</span><span>{backend?.isOnline ? "LIVE YOLO INSPECTIONS · BACKEND CONNECTED" : "LIVE UPLOAD METRICS · BACKEND RESULTS ONLY"}</span></footer></div>
     </section>
       {notice && <div className="toast"><span className="toast-check">i</span>{notice}</div>}
     </main>;
