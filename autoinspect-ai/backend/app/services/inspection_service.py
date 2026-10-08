@@ -162,8 +162,8 @@ class InspectionService:
 
             hist_defects = []
             for d in detections:
-                r_norm, theta_deg = PredictiveHeatmapEngine.cartesian_to_polar(
-                    d.bbox[0], d.bbox[1], d.bbox[2], d.bbox[3], w, h
+                dx, dy, r_norm, clock_deg, clock_h, zone = PredictiveHeatmapEngine.cartesian_to_polar(
+                    d.bbox, w, h
                 )
                 p_code = getattr(d.fmea, "process_code", "UNKNOWN") if getattr(d, "fmea", None) else "UNKNOWN"
                 hist_defects.append(HistoricalDefectPoint(
@@ -171,8 +171,12 @@ class InspectionService:
                     process_code=p_code,
                     severity=d.severity.value,
                     confidence=d.confidence,
+                    dx_normalized=dx,
+                    dy_normalized=dy,
                     r_normalized=r_norm,
-                    theta_degrees=theta_deg,
+                    theta_degrees=clock_deg,
+                    clock_hour=clock_h,
+                    zone_name=zone,
                     area_pct=d.area_percentage,
                     bbox=d.bbox
                 ))

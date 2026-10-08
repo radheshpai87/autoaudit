@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any, Tuple
-from datetime import datetime
 
 
 class HistoricalDefectPoint(BaseModel):
@@ -8,8 +7,12 @@ class HistoricalDefectPoint(BaseModel):
     process_code: str
     severity: str
     confidence: float
-    r_normalized: float = Field(..., description="Normalized radial distance from hub center (0.0 to 1.0)")
-    theta_degrees: float = Field(..., description="Angular position in degrees (0 to 360)")
+    dx_normalized: float = Field(..., description="Normalized delta X from disc center (-0.5 to +0.5)")
+    dy_normalized: float = Field(..., description="Normalized delta Y from disc center (-0.5 to +0.5, negative is top)")
+    r_normalized: float = Field(..., description="Normalized radial distance from hub center (0.0 to 0.5)")
+    theta_degrees: float = Field(..., description="Clock angle in degrees (0 = 12 o'clock, 90 = 3 o'clock)")
+    clock_hour: float = Field(..., description="Clock hour position (e.g. 1.0 = 1 o'clock, 6.0 = 6 o'clock)")
+    zone_name: str = Field(default="Swept Friction Band", description="Rotor zone description")
     area_pct: float
     bbox: List[float]
 
@@ -47,11 +50,15 @@ class MachineSignatureWarning(BaseModel):
 
 
 class HeatmapBin(BaseModel):
+    dx: float
+    dy: float
     r_bin: float
     theta_bin: float
+    clock_hour: float
     intensity: float
     defect_count: int
     top_process_code: str
+    defect_type: str
 
 
 class MachineHeatmapData(BaseModel):
@@ -60,6 +67,7 @@ class MachineHeatmapData(BaseModel):
     total_samples: int
     total_defects: int
     bins: List[HeatmapBin]
+    raw_points: List[HistoricalDefectPoint] = Field(default_factory=list)
     signature_summary: str
 
 
@@ -72,3 +80,6 @@ class HistoricalAnalyticsResponse(BaseModel):
     active_early_warnings: List[MachineSignatureWarning]
     machine_heatmaps: Dict[str, MachineHeatmapData]
     time_series: List[Dict[str, Any]]
+    latest_inspected_defect: Optional[HistoricalDefectPoint] = None
+    latest_machine_code: Optional[str] = None
+    collection_status_message: str = ""

@@ -107,11 +107,15 @@ export interface MachineSignatureWarning {
 }
 
 export interface HeatmapBin {
+  dx: number
+  dy: number
   r_bin: number
   theta_bin: number
+  clock_hour: number
   intensity: number
   defect_count: number
   top_process_code: string
+  defect_type: string
 }
 
 export interface MachineHeatmapData {
@@ -120,6 +124,7 @@ export interface MachineHeatmapData {
   total_samples: number
   total_defects: number
   bins: HeatmapBin[]
+  raw_points?: any[]
   signature_summary: string
 }
 
@@ -143,8 +148,12 @@ export interface HistoricalInspectionItem {
     process_code: string
     severity: string
     confidence: number
+    dx_normalized?: number
+    dy_normalized?: number
     r_normalized: number
     theta_degrees: number
+    clock_hour?: number
+    zone_name?: string
     area_pct: number
     bbox: number[]
   }[]
@@ -170,5 +179,8 @@ export interface HistoricalAnalyticsResponse {
     process_code: string
     wear_index: number
   }[]
+  latest_inspected_defect?: any
+  latest_machine_code?: string | null
+  collection_status_message?: string
 }
 

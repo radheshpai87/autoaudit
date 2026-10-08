@@ -85,3 +85,26 @@ def get_inspection_history(limit: int = 50):
     from app.services.historical_db import HistoricalDatabaseManager
     return HistoricalDatabaseManager.get_recent_inspections(limit=limit)
 
+
+@router.post("/analytics/simulate")
+def simulate_production_shift(machine_code: str = "PU01", count: int = 3):
+    """
+    POST /api/analytics/simulate
+    Simulates consecutive production discs for a specific machine to allow
+    observing heatmap accumulation and early warning activation in real-time.
+    """
+    from app.services.predictive_engine import PredictiveHeatmapEngine
+    return PredictiveHeatmapEngine.simulate_shift_batch(machine_code=machine_code, count=count)
+
+
+@router.post("/analytics/reset")
+def reset_historical_data():
+    """
+    POST /api/analytics/reset
+    Wipes the historical inspection database clean so testing starts from 0 parts.
+    """
+    from app.services.historical_db import HistoricalDatabaseManager
+    from app.services.predictive_engine import PredictiveHeatmapEngine
+    HistoricalDatabaseManager.clear_all_records()
+    return PredictiveHeatmapEngine.generate_analytics_and_heatmaps()
+

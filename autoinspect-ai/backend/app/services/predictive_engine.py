@@ -1,6 +1,7 @@
 import math
 import numpy as np
-from typing import List, Dict, Any, Tuple
+from datetime import datetime, timezone, timedelta
+from typing import List, Dict, Any, Tuple, Optional
 from collections import defaultdict
 from app.models.historical_schemas import (
     HistoricalInspectionRecord,
@@ -13,42 +14,33 @@ from app.models.historical_schemas import (
 from app.services.historical_db import HistoricalDatabaseManager
 
 
-# Research Paper (Appl. Sci. 2020, 10, 6565) Known Failure Signatures & Polar Footprints
 KNOWN_SIGNATURE_PATTERNS = {
+    "CR01": {
+        "station": "Grinding & Induction Treatment",
+        "failure_mode": "Transverse radial thermal crack / fissure",
+        "potential_causes": "Cyclic thermal shock, residual tensile stress, or coolant pressure drop",
+        "signature_type": "Swept friction ring localized radial fracture (0.30 <= r <= 0.42)",
+        "recommended_action": "Condemn rotor immediately. Verify coolant nozzle pressure and induction quench timing.",
+    },
     "PU01": {
         "station": "Picking-up Station",
         "failure_mode": "Robot unloader gripper mechanical indentation",
         "potential_causes": "Gripper finger misalignment or degraded polyurethane buffer pads",
         "signature_type": "Bipolar outer edge clustering (θ near 90° & 270°, r >= 0.37)",
-        "expected_r_min": 0.36,
-        "expected_r_max": 0.43,
         "recommended_action": "Realign unloader robot gripper fingers and replace polyurethane protective pads immediately.",
     },
     "DT16": {
         "station": "Grinding Station",
         "failure_mode": "Uneven wear / loading of CBN grinding wheel",
         "potential_causes": "CBN tool dull or loaded with swarf; excessive feed rate in finishing pass",
-        "signature_type": "Concentric annular track scoring (0.31 <= r <= 0.37 across wide θ)",
-        "expected_r_min": 0.30,
-        "expected_r_max": 0.38,
+        "signature_type": "Concentric annular track scoring (0.31 <= r <= 0.37 across multiple angles)",
         "recommended_action": "Execute CBN grinding wheel dressing cycle and check tool replacement counter.",
-    },
-    "CR01": {
-        "station": "Grinding & Induction Treatment",
-        "failure_mode": "Transverse radial thermal crack / fissure",
-        "potential_causes": "Cyclic thermal shock, residual tensile stress, or coolant pressure drop",
-        "signature_type": "High tortuosity radial fissure extending across swept friction ring",
-        "expected_r_min": 0.25,
-        "expected_r_max": 0.42,
-        "recommended_action": "Verify coolant flow pressure and inspect casting induction quench parameters.",
     },
     "DT17": {
         "station": "Grinding Station",
         "failure_mode": "Thickness variation / Spindle bearing chatter",
         "potential_causes": "Spindle anti-backlash bearing clearance loosening",
         "signature_type": "Wavy thickness flutter and cavitation pits",
-        "expected_r_min": 0.22,
-        "expected_r_max": 0.40,
         "recommended_action": "Check cutting speed variation and adjust spindle anti-backlash bearing clearance.",
     },
     "BA02": {
@@ -56,8 +48,6 @@ KNOWN_SIGNATURE_PATTERNS = {
         "failure_mode": "Dynamic unbalance / Runout tilt",
         "potential_causes": "Balancing jig wear and locating clamp pin eccentricity",
         "signature_type": "Outer rim dynamic runout wobble (> 20 µm)",
-        "expected_r_min": 0.38,
-        "expected_r_max": 0.43,
         "recommended_action": "Recalibrate balancing machine jig and replace worn locating clamp pins.",
     },
     "IN01": {
@@ -65,8 +55,6 @@ KNOWN_SIGNATURE_PATTERNS = {
         "failure_mode": "Residual wash water oxidation & rust",
         "potential_causes": "Air knife blower nozzle clogging or insufficient drying heat cycle",
         "signature_type": "Discoloration patches across friction face & hub hat",
-        "expected_r_min": 0.15,
-        "expected_r_max": 0.43,
         "recommended_action": "Clean air knife drying nozzles and verify wash drying temperature.",
     },
 }
@@ -74,35 +62,57 @@ KNOWN_SIGNATURE_PATTERNS = {
 
 class PredictiveHeatmapEngine:
     """
-    Computes polar spatial density heatmaps and runs signature correlation
-    to detect early machine failure before out-of-spec scrap limits are reached.
+    Transforms detected bounding boxes into exact rotor Cartesian and clock coordinates.
+    Generates cumulative spatial heatmaps and triggers early warnings only when
+    statistically significant spatial clusters or tolerance drift are observed.
     """
 
     @classmethod
-    def cartesian_to_polar(cls, x: float, y: float, w: float, h: float, img_w: int, img_h: int) -> Tuple[float, float]:
+    def cartesian_to_polar(cls, bbox: List[float], img_w: int, img_h: int) -> Tuple[float, float, float, float, float, str]:
         """
-        Transforms bounding box centroid into normalized polar coordinates (r, theta)
-        relative to the rotor hub center (0.5, 0.5).
-        r in [0.0, 1.0], theta in [0.0, 360.0).
+        Calculates exact centroid from bbox [x1, y1, x2, y2].
+        Returns:
+            (dx_norm, dy_norm, r_norm, clock_deg, clock_hour, zone_name)
         """
-        center_x = (x + w / 2.0) / float(img_w)
-        center_y = (y + h / 2.0) / float(img_h)
+        x1, y1, x2, y2 = bbox[0], bbox[1], bbox[2], bbox[3]
 
-        dx = center_x - 0.5
-        dy = center_y - 0.5
+        # Centroid
+        cx = (x1 + x2) / 2.0
+        cy = (y1 + y2) / 2.0
 
-        # Radius normalized (0.5 is outer border of a square bounding the circle)
-        r = math.sqrt(dx * dx + dy * dy)
-        theta_rad = math.atan2(dy, dx)
-        theta_deg = (math.degrees(theta_rad) + 360.0) % 360.0
+        # Normalized coordinates relative to image center (0.5, 0.5)
+        u = cx / float(max(img_w, 1))
+        v = cy / float(max(img_h, 1))
 
-        return round(r, 4), round(theta_deg, 2)
+        dx = round(u - 0.5, 4)
+        dy = round(v - 0.5, 4)
+
+        # Distance from center
+        r = round(math.sqrt(dx * dx + dy * dy), 4)
+
+        # Clock-face angle: 12 o'clock is 0 deg (top, dy < 0), 3 o'clock is 90 deg, 6 o'clock is 180 deg
+        clock_deg = (math.degrees(math.atan2(dx, -dy)) + 360.0) % 360.0
+        clock_hour = round(clock_deg / 30.0, 1)
+        if clock_hour == 0.0:
+            clock_hour = 12.0
+
+        # Rotor radial zone determination
+        if r < 0.22:
+            zone = "Hub Hat / Bolt Mounting Flange"
+        elif r < 0.32:
+            zone = "Inner Swept Friction Track"
+        elif r <= 0.43:
+            zone = "Mid-Swept Braking Face"
+        else:
+            zone = "Outer Chamfer & Perimeter Edge"
+
+        return dx, dy, r, round(clock_deg, 1), clock_hour, zone
 
     @classmethod
     def generate_analytics_and_heatmaps(cls, limit: int = 100) -> HistoricalAnalyticsResponse:
         records = HistoricalDatabaseManager.get_recent_inspections(limit=limit)
-
         total = len(records)
+
         if total == 0:
             return HistoricalAnalyticsResponse(
                 total_inspections=0,
@@ -111,8 +121,11 @@ class PredictiveHeatmapEngine:
                 review_rate=0.0,
                 records=[],
                 active_early_warnings=[],
-                machine_heatmaps={},
-                time_series=[]
+                machine_heatmaps=cls._empty_heatmaps(),
+                time_series=[],
+                latest_inspected_defect=None,
+                latest_machine_code=None,
+                collection_status_message="No inspection records logged yet. Upload or test a brake disc in HUD Inspection mode to begin logging real-time telemetry."
             )
 
         pass_count = sum(1 for r in records if r.overall_status == "PASS")
@@ -123,19 +136,24 @@ class PredictiveHeatmapEngine:
         reject_rate = round((reject_count / total) * 100.0, 1)
         review_rate = round((review_count / total) * 100.0, 1)
 
-        # 1. Build Polar Spatial Heatmaps aggregated by Machine Code
-        # We divide the rotor disc into 8 radial bands (r: 0.0 -> 0.5) and 24 angular sectors (each 15 deg)
+        # Extract all defect points
         machine_defects: Dict[str, List[HistoricalDefectPoint]] = defaultdict(list)
         all_defects: List[HistoricalDefectPoint] = []
+        latest_defect: Optional[HistoricalDefectPoint] = None
+        latest_machine: Optional[str] = None
 
         for r in records:
             for d in r.defects:
                 code = d.process_code or "UNKNOWN"
                 machine_defects[code].append(d)
                 all_defects.append(d)
+                if latest_defect is None:
+                    latest_defect = d
+                    latest_machine = code
 
+        # Build Heatmap structure per machine
+        target_codes = ["CR01", "PU01", "DT16", "DT17", "BA02", "IN01"]
         machine_heatmaps: Dict[str, MachineHeatmapData] = {}
-        target_codes = ["PU01", "DT16", "CR01", "DT17", "BA02", "IN01"]
 
         for code in target_codes:
             defects_for_code = machine_defects.get(code, [])
@@ -144,27 +162,19 @@ class PredictiveHeatmapEngine:
                 "signature_type": "General spatial distribution"
             })
 
-            # Create 2D grid bins: (r_bin, theta_bin)
-            # r_bin: 0.1 to 0.45 in steps of 0.05 (7 bins)
-            # theta_bin: 0 to 360 in steps of 30 (12 bins)
-            grid: Dict[Tuple[float, float], int] = defaultdict(int)
+            bins = []
             for d in defects_for_code:
-                # Snap to grid
-                r_snapped = round(math.floor(d.r_normalized / 0.05) * 0.05, 2)
-                t_snapped = round(math.floor(d.theta_degrees / 30.0) * 30.0, 1)
-                grid[(r_snapped, t_snapped)] += 1
-
-            max_count = max(grid.values()) if grid else 1
-            bins = [
-                HeatmapBin(
-                    r_bin=k[0],
-                    theta_bin=k[1],
-                    intensity=round(v / max_count, 3),
-                    defect_count=v,
-                    top_process_code=code
-                )
-                for k, v in grid.items()
-            ]
+                bins.append(HeatmapBin(
+                    dx=d.dx_normalized,
+                    dy=d.dy_normalized,
+                    r_bin=d.r_normalized,
+                    theta_bin=d.theta_degrees,
+                    clock_hour=d.clock_hour,
+                    intensity=round(d.confidence, 2),
+                    defect_count=1,
+                    top_process_code=code,
+                    defect_type=d.defect_type
+                ))
 
             machine_heatmaps[code] = MachineHeatmapData(
                 machine_code=code,
@@ -172,14 +182,27 @@ class PredictiveHeatmapEngine:
                 total_samples=total,
                 total_defects=len(defects_for_code),
                 bins=bins,
+                raw_points=defects_for_code,
                 signature_summary=meta["signature_type"]
             )
 
-        # 2. Predictive Failure & Early Warning Engine
-        # Analyzes the last 20 inspection records for spatial signature clusters and time-series tolerance drift
-        active_warnings = cls._evaluate_early_warnings(records)
+        # Early warnings evaluated strictly against real accumulated evidence
+        active_warnings = cls._evaluate_early_warnings(records, machine_defects)
 
-        # 3. Format Time-Series for Frontend Charting (chronological order)
+        # Collection status explanation for user
+        if len(all_defects) == 0:
+            status_msg = f"Logged {total} conforming part(s) with zero surface defects. Production within Table 1 tolerances."
+        elif len(active_warnings) == 0:
+            status_msg = (
+                f"Live Ingestion Mode: {len(all_defects)} defect(s) logged across {total} part(s). "
+                f"Spatial defect hotspots plotted at exact locations. "
+                f"Machine failure warning triggers when ≥ 3 recurrent defects cluster on a single station."
+            )
+        else:
+            status_msg = (
+                f"Recurrent failure pattern detected! {len(active_warnings)} station(s) show spatial defect clustering."
+            )
+
         time_series = [
             {
                 "timestamp": r.timestamp,
@@ -201,110 +224,236 @@ class PredictiveHeatmapEngine:
             pass_rate=pass_rate,
             reject_rate=reject_rate,
             review_rate=review_rate,
-            records=records[:25],  # Return recent 25 for fast table rendering
+            records=records[:25],
             active_early_warnings=active_warnings,
             machine_heatmaps=machine_heatmaps,
-            time_series=time_series
+            time_series=time_series,
+            latest_inspected_defect=latest_defect,
+            latest_machine_code=latest_machine or (records[0].primary_process_code if records else None),
+            collection_status_message=status_msg
         )
 
     @classmethod
-    def _evaluate_early_warnings(cls, records: List[HistoricalInspectionRecord]) -> List[MachineSignatureWarning]:
+    def _empty_heatmaps(cls) -> Dict[str, MachineHeatmapData]:
+        res = {}
+        for code, meta in KNOWN_SIGNATURE_PATTERNS.items():
+            res[code] = MachineHeatmapData(
+                machine_code=code,
+                station=meta["station"],
+                total_samples=0,
+                total_defects=0,
+                bins=[],
+                raw_points=[],
+                signature_summary=meta["signature_type"]
+            )
+        return res
+
+    @classmethod
+    def _evaluate_early_warnings(
+        cls,
+        records: List[HistoricalInspectionRecord],
+        machine_defects: Dict[str, List[HistoricalDefectPoint]]
+    ) -> List[MachineSignatureWarning]:
         """
-        Runs spatial signature matching and drift regression over recent parts
-        to detect incipient tool or fixture degradation.
+        Only triggers a machine warning when REAL evidence exists in the database:
+        - At least 3 defects logged for that machine station, OR
+        - Upward DTV drift slope > +0.05 um/part across >= 5 parts.
         """
         warnings: List[MachineSignatureWarning] = []
-        recent_records = records[:20]  # Last 20 parts
 
-        # Case 1: Evaluate PU01 Robot Gripper Degradation (Bipolar spatial cluster at 90 deg / 270 deg)
-        pu01_defects = [
-            d for r in recent_records
-            for d in r.defects
-            if d.process_code == "PU01"
-        ]
-
+        # 1. Check PU01 Robot Gripper Impact Clustering (requires >= 3 defects)
+        pu01_defects = machine_defects.get("PU01", [])
         if len(pu01_defects) >= 3:
-            # Check if defects cluster near 90 or 270 deg on the outer perimeter (r >= 0.36)
-            bipolar_cluster_count = sum(
+            # Check for bipolar orientation (near 90 deg / 3 o'clock or 270 deg / 9 o'clock)
+            bipolar_count = sum(
                 1 for d in pu01_defects
-                if d.r_normalized >= 0.36 and (
-                    abs(d.theta_degrees - 90.0) <= 25.0 or
-                    abs(d.theta_degrees - 270.0) <= 25.0
-                )
+                if abs(d.theta_degrees - 90.0) <= 30.0 or abs(d.theta_degrees - 270.0) <= 30.0
             )
-            confidence = min(0.96, 0.65 + (bipolar_cluster_count / len(pu01_defects)) * 0.30)
+            conf = min(0.96, 0.60 + (bipolar_count / len(pu01_defects)) * 0.35)
             meta = KNOWN_SIGNATURE_PATTERNS["PU01"]
             warnings.append(MachineSignatureWarning(
                 machine_code="PU01",
                 station=meta["station"],
                 failure_mode=meta["failure_mode"],
                 potential_causes=meta["potential_causes"],
-                confidence=round(confidence, 2),
-                spatial_signature="Bipolar Outer Rim Cluster (θ ≈ 90° & 270°, r = 0.38–0.41)",
-                severity_level="critical" if len(pu01_defects) >= 6 else "warning",
+                confidence=round(conf, 2),
+                spatial_signature=f"Bipolar Rim Cluster ({bipolar_count} defects at 3 o'clock & 9 o'clock)",
+                severity_level="critical" if len(pu01_defects) >= 5 else "warning",
                 alert_message=(
-                    f"PREDICTIVE ALERT: Station PU01 robot unloader gripper shows repeated micro-impact dents "
-                    f"({bipolar_cluster_count} incidents at 90°/270° orientation in last {len(recent_records)} parts). "
-                    f"Polyurethane buffer pads are degraded."
+                    f"PREDICTIVE WARNING: Station PU01 unloader robot gripper exhibits repetitive impact dents "
+                    f"({len(pu01_defects)} defects logged). Polyurethane protective buffer pads degraded."
                 ),
                 recommended_action=meta["recommended_action"],
                 evidence_count=len(pu01_defects),
-                recent_trend_slope=round(len(pu01_defects) / 20.0, 3)
+                recent_trend_slope=round(len(pu01_defects) / max(len(records), 1), 3)
             ))
 
-        # Case 2: Evaluate DT16 CBN Grinding Wheel Glazing / Concentric Wear Drift
-        dtv_values = [r.dtv_value_um for r in recent_records]
-        if len(dtv_values) >= 10:
-            # Linear trend slope (positive slope indicates DTV drift towards 5 um limit)
+        # 2. Check DT16 Grinding Wheel Wear (requires >= 3 defects OR DTV drift)
+        dt16_defects = machine_defects.get("DT16", [])
+        dtv_values = [r.dtv_value_um for r in records[:15]]
+        dtv_slope = 0.0
+        if len(dtv_values) >= 5:
             x = np.arange(len(dtv_values))
-            y = np.array(list(reversed(dtv_values)))  # Chronological order
-            slope, _ = np.polyfit(x, y, 1)
+            y = np.array(list(reversed(dtv_values)))
+            dtv_slope = float(np.polyfit(x, y, 1)[0])
 
-            recent_dt16 = [d for r in recent_records for d in r.defects if d.process_code == "DT16"]
-            latest_dtv = dtv_values[0]
+        if len(dt16_defects) >= 3 or (len(dtv_values) >= 5 and dtv_slope > 0.10):
+            meta = KNOWN_SIGNATURE_PATTERNS["DT16"]
+            warnings.append(MachineSignatureWarning(
+                machine_code="DT16",
+                station=meta["station"],
+                failure_mode=meta["failure_mode"],
+                potential_causes=meta["potential_causes"],
+                confidence=0.89,
+                spatial_signature="Concentric Annular Scoring & DTV Telemetry Drift",
+                severity_level="warning",
+                alert_message=(
+                    f"PREDICTIVE WARNING: Grinding Station DT16 CBN wheel wear detected. "
+                    f"{len(dt16_defects)} concentric scoring defect(s) logged; DTV drift slope: +{dtv_slope*5:.2f} µm/5 parts."
+                ),
+                recommended_action=meta["recommended_action"],
+                evidence_count=len(dt16_defects),
+                recent_trend_slope=round(dtv_slope, 3)
+            ))
 
-            if slope > 0.05 or latest_dtv >= 3.8 or len(recent_dt16) >= 2:
-                meta = KNOWN_SIGNATURE_PATTERNS["DT16"]
-                conf = min(0.94, 0.70 + slope * 1.5)
-                warnings.append(MachineSignatureWarning(
-                    machine_code="DT16",
-                    station=meta["station"],
-                    failure_mode=meta["failure_mode"],
-                    potential_causes=meta["potential_causes"],
-                    confidence=round(conf, 2),
-                    spatial_signature="Concentric Annular Scoring & DTV Upward Drift",
-                    severity_level="warning",
-                    alert_message=(
-                        f"PREDICTIVE WARNING: Grinding Station DT16 DTV telemetry is drifting upward "
-                        f"(slope: +{slope*10:.2f} µm/10 parts, current: {latest_dtv} µm, spec limit: ≤ 5 µm). "
-                        f"CBN wheel swarf loading detected."
-                    ),
-                    recommended_action=meta["recommended_action"],
-                    evidence_count=len(recent_dt16) + (1 if slope > 0.05 else 0),
-                    recent_trend_slope=round(float(slope), 3)
-                ))
-
-        # Case 3: Evaluate BA02 Balancing Collet Runout Drift
-        runout_values = [r.runout_value_um for r in recent_records]
-        if len(runout_values) >= 10:
-            latest_runout = runout_values[0]
-            if latest_runout >= 18.0:
-                meta = KNOWN_SIGNATURE_PATTERNS["BA02"]
-                warnings.append(MachineSignatureWarning(
-                    machine_code="BA02",
-                    station=meta["station"],
-                    failure_mode=meta["failure_mode"],
-                    potential_causes=meta["potential_causes"],
-                    confidence=0.86,
-                    spatial_signature="Radial Runout Eccentricity (> 18 µm approaching 25 µm limit)",
-                    severity_level="warning",
-                    alert_message=(
-                        f"PREDICTIVE WARNING: Balancing Station BA02 runout elevated at {latest_runout} µm "
-                        f"(limit ≤ 25 µm). Balancing collet wear detected."
-                    ),
-                    recommended_action=meta["recommended_action"],
-                    evidence_count=1,
-                    recent_trend_slope=0.04
-                ))
+        # 3. Check CR01 Thermal Quench Cracks (requires >= 2 radial cracks)
+        cr01_defects = machine_defects.get("CR01", [])
+        if len(cr01_defects) >= 2:
+            meta = KNOWN_SIGNATURE_PATTERNS["CR01"]
+            warnings.append(MachineSignatureWarning(
+                machine_code="CR01",
+                station=meta["station"],
+                failure_mode=meta["failure_mode"],
+                potential_causes=meta["potential_causes"],
+                confidence=0.95,
+                spatial_signature="Repeated Radial Structural Cracks across swept friction ring",
+                severity_level="critical",
+                alert_message=(
+                    f"CRITICAL REJECTION: Station CR01 has produced {len(cr01_defects)} structural radial cracks. "
+                    f"Immediate batch shutdown required to check casting induction quenching."
+                ),
+                recommended_action=meta["recommended_action"],
+                evidence_count=len(cr01_defects),
+                recent_trend_slope=0.1
+            ))
 
         return warnings
+
+    @classmethod
+    def simulate_shift_batch(cls, machine_code: str = "PU01", count: int = 3) -> HistoricalAnalyticsResponse:
+        """
+        Simulates adding `count` consecutive production discs with micro-variations
+        of the specified machine signature, so the user can watch the heatmap and
+        early prediction engine evolve live.
+        """
+        import random
+        now = datetime.now(timezone.utc)
+        machine_code = machine_code.upper()
+
+        for k in range(count):
+            p_time = (now - timedelta(minutes=(count - k) * 5)).isoformat()
+            p_id = f"BD-SIM-{random.randint(1000, 9999)}"
+
+            if machine_code == "PU01":
+                # Bipolar gripper dents (90 deg or 270 deg)
+                theta = random.choice([90.0, 270.0]) + random.uniform(-8.0, 8.0)
+                r_norm = random.uniform(0.38, 0.41)
+                rad = math.radians(theta)
+                dx = round(r_norm * math.sin(rad), 4)
+                dy = round(-r_norm * math.cos(rad), 4)
+                clock_h = round(theta / 30.0, 1) or 12.0
+
+                defect = HistoricalDefectPoint(
+                    defect_type="Surface Mechanical Impact Dent",
+                    process_code="PU01",
+                    severity="medium",
+                    confidence=round(0.85 + random.uniform(0, 0.08), 2),
+                    dx_normalized=dx,
+                    dy_normalized=dy,
+                    r_normalized=round(r_norm, 3),
+                    theta_degrees=round(theta, 1),
+                    clock_hour=clock_h,
+                    zone_name="Outer Chamfer & Perimeter Edge",
+                    area_pct=round(random.uniform(0.2, 0.35), 2),
+                    bbox=[500.0, 200.0, 530.0, 230.0]
+                )
+                rec = HistoricalInspectionRecord(
+                    part_id=p_id,
+                    timestamp=p_time,
+                    image_filename=f"sim_pu01_{k}.jpg",
+                    overall_status="REVIEW",
+                    defect_count=1,
+                    condition="ALMOST_WORN",
+                    wear_index_score=52.0,
+                    dtv_value_um=3.4,
+                    runout_value_um=13.2,
+                    parallelism_value_um=22.0,
+                    highest_rpn=84,
+                    primary_process_code="PU01",
+                    station="Picking-up Station",
+                    defects=[defect]
+                )
+                HistoricalDatabaseManager.log_inspection(rec)
+
+            elif machine_code == "CR01":
+                # Crack in top-right quadrant (~1 o'clock / ~50 deg)
+                theta = random.uniform(40.0, 60.0)
+                r_norm = random.uniform(0.34, 0.39)
+                rad = math.radians(theta)
+                dx = round(r_norm * math.sin(rad), 4)
+                dy = round(-r_norm * math.cos(rad), 4)
+                clock_h = round(theta / 30.0, 1)
+
+                defect = HistoricalDefectPoint(
+                    defect_type="Surface Radial Crack",
+                    process_code="CR01",
+                    severity="critical",
+                    confidence=round(0.93 + random.uniform(0, 0.05), 2),
+                    dx_normalized=dx,
+                    dy_normalized=dy,
+                    r_normalized=round(r_norm, 3),
+                    theta_degrees=round(theta, 1),
+                    clock_hour=clock_h,
+                    zone_name="Mid-Swept Braking Face",
+                    area_pct=round(random.uniform(0.6, 0.9), 2),
+                    bbox=[927.0, 245.0, 1012.0, 403.0]
+                )
+                rec = HistoricalInspectionRecord(
+                    part_id=p_id,
+                    timestamp=p_time,
+                    image_filename=f"sim_cr01_{k}.jpg",
+                    overall_status="REJECT",
+                    defect_count=1,
+                    condition="FAULTY",
+                    wear_index_score=88.0,
+                    dtv_value_um=7.2,
+                    runout_value_um=18.4,
+                    parallelism_value_um=42.0,
+                    highest_rpn=120,
+                    primary_process_code="CR01",
+                    station="Grinding & Induction Treatment",
+                    defects=[defect]
+                )
+                HistoricalDatabaseManager.log_inspection(rec)
+
+            else:
+                # Normal conforming part
+                rec = HistoricalInspectionRecord(
+                    part_id=p_id,
+                    timestamp=p_time,
+                    image_filename=f"sim_pass_{k}.jpg",
+                    overall_status="PASS",
+                    defect_count=0,
+                    condition="GOOD",
+                    wear_index_score=14.0,
+                    dtv_value_um=2.1,
+                    runout_value_um=11.2,
+                    parallelism_value_um=16.0,
+                    highest_rpn=0,
+                    primary_process_code=None,
+                    station=None,
+                    defects=[]
+                )
+                HistoricalDatabaseManager.log_inspection(rec)
+
+        return cls.generate_analytics_and_heatmaps()
