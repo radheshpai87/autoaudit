@@ -26,7 +26,7 @@ class Settings(BaseSettings):
 
     # File upload limits
     MAX_UPLOAD_SIZE_MB: int = 20
-    ALLOWED_EXTENSIONS: List[str] = [".jpg", ".jpeg", ".png"]
+    ALLOWED_EXTENSIONS: List[str] = [".jpg", ".jpeg", ".png", ".webp"]
 
     # Inference settings
     # Inference mode: "yolo", "mock", or "auto"
