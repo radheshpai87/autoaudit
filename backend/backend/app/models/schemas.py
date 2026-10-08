@@ -147,6 +147,7 @@ class InspectionResponse(BaseModel):
     image_height: int
     annotated_image_base64: Optional[str] = None
     mask_overlay_base64: Optional[str] = None
+    heatmap_overlay_base64: Optional[str] = None
     brake_component_type: str = Field(default="Ventilated Brake Disc Rotor", description="Component classification")
 
 

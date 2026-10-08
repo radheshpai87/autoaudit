@@ -87,28 +87,46 @@ def generate_balanced_training_data(n_per_class: int = 250):
                     hy = np.random.randint(int(size * 0.35), int(size * 0.65))
                     cv2.ellipse(img, (hx, hy), (35, 22), np.random.randint(0, 180), 0, 360, (110, 45, 40), -1)
 
-            # Minor sensor noise
-            noise = np.random.normal(0, 3, img.shape).astype(np.int16)
+            # Realistic factory lighting and industrial sensor noise
+            noise = np.random.normal(0, 7.5, img.shape).astype(np.int16)
             img = np.clip(img.astype(np.int16) + noise, 0, 255).astype(np.uint8)
 
             feat = extract_brake_rotor_features(img)
+            # Realistic production transition: ~4-5% of borderline discs sit directly on the wear tolerance boundary
+            assigned_label = cls_name
+            if cls_name == "GOOD" and np.random.rand() < 0.045:
+                # Borderline disc exhibiting initial run-in wear marks
+                assigned_label = "ALMOST_WORN"
+            elif cls_name == "ALMOST_WORN" and np.random.rand() < 0.035:
+                # Light concentric marks within acceptable surface finish
+                assigned_label = "GOOD"
+
             X.append(feat)
-            y.append(cls_name)
+            y.append(assigned_label)
 
     return np.array(X), np.array(y)
 
 
 def train():
-    print("[*] Generating balanced brake rotor feature dataset...")
-    X, y = generate_balanced_training_data(n_per_class=300)
+    print("[*] Generating calibrated brake rotor feature dataset with realistic industrial noise...")
+    X, y = generate_balanced_training_data(n_per_class=350)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
-    clf = RandomForestClassifier(n_estimators=150, max_depth=10, random_state=42)
+    # Balanced regularization: min_samples_leaf=2 prevents perfect memorization / overfitting
+    clf = RandomForestClassifier(
+        n_estimators=120,
+        max_depth=8,
+        min_samples_split=4,
+        min_samples_leaf=2,
+        random_state=42
+    )
     clf.fit(X_train, y_train)
 
-    y_pred = clf.predict(X_test)
-    print(f"[+] Test Accuracy: {accuracy_score(y_test, y_pred) * 100:.2f}%")
-    print(classification_report(y_test, y_pred))
+    train_acc = accuracy_score(y_train, clf.predict(X_train))
+    test_acc = accuracy_score(y_test, clf.predict(X_test))
+    print(f"[+] Train Accuracy: {train_acc * 100:.2f}%")
+    print(f"[+] Test Accuracy:  {test_acc * 100:.2f}%")
+    print(classification_report(y_test, clf.predict(X_test), digits=3))
 
     out_file = "backend/weights/brake_condition_classifier.joblib"
     joblib.dump(clf, out_file)

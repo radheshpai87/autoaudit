@@ -80,6 +80,7 @@ export interface InspectionResponse {
   image_height: number
   annotated_image_base64?: string
   mask_overlay_base64?: string
+  heatmap_overlay_base64?: string
   brake_component_type?: string
 }
 
@@ -91,3 +92,101 @@ export interface HealthResponse {
   model_loaded: boolean
   weights_path?: string
 }
+
+export interface MachineSignatureWarning {
+  machine_code: string
+  station: string
+  failure_mode: string
+  potential_causes: string
+  confidence: number
+  spatial_signature: string
+  severity_level: 'warning' | 'critical'
+  alert_message: string
+  recommended_action: string
+  evidence_count: number
+  recent_trend_slope: number
+}
+
+export interface HeatmapBin {
+  dx: number
+  dy: number
+  r_bin: number
+  theta_bin: number
+  clock_hour: number
+  intensity: number
+  defect_count: number
+  top_process_code: string
+  defect_type: string
+  bbox?: number[]
+  mask_polygon?: number[][]
+  area_pct?: number
+}
+
+export interface MachineHeatmapData {
+  machine_code: string
+  station: string
+  total_samples: number
+  total_defects: number
+  bins: HeatmapBin[]
+  raw_points?: any[]
+  signature_summary: string
+}
+
+export interface HistoricalInspectionItem {
+  id?: number
+  part_id: string
+  timestamp: string
+  image_filename: string
+  overall_status: string
+  defect_count: number
+  condition: string
+  wear_index_score: number
+  dtv_value_um: number
+  runout_value_um: number
+  parallelism_value_um: number
+  highest_rpn: number
+  primary_process_code?: string | null
+  station?: string | null
+  defects: {
+    defect_type: string
+    process_code: string
+    severity: string
+    confidence: number
+    dx_normalized?: number
+    dy_normalized?: number
+    r_normalized: number
+    theta_degrees: number
+    clock_hour?: number
+    zone_name?: string
+    area_pct: number
+    bbox: number[]
+  }[]
+}
+
+export interface HistoricalAnalyticsResponse {
+  total_inspections: number
+  pass_rate: number
+  reject_rate: number
+  review_rate: number
+  records: HistoricalInspectionItem[]
+  active_early_warnings: MachineSignatureWarning[]
+  machine_heatmaps: Record<string, MachineHeatmapData>
+  time_series: {
+    timestamp: string
+    part_id: string
+    dtv_um: number
+    runout_um: number
+    parallelism_um: number
+    rpn: number
+    status: string
+    defect_count: number
+    process_code: string
+    wear_index: number
+  }[]
+  latest_inspection_record?: HistoricalInspectionItem | null
+  latest_inspected_defect?: any
+  latest_machine_code?: string | null
+  latest_conveyor_status?: string
+  collection_status_message?: string
+}
+

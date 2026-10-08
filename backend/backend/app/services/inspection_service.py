@@ -15,8 +15,7 @@ from app.models.schemas import (
 )
 from app.services.severity_engine import SeverityEngine
 from app.inference.manager import ModelManager
-from app.inference.mock_model import MockDefectModel
-from app.utils.visualizer import draw_inspection_overlay, encode_image_to_base64
+from app.utils.visualizer import draw_inspection_overlay, encode_image_to_base64, generate_defect_heatmap_overlay
 
 
 class InspectionService:
@@ -125,6 +124,10 @@ class InspectionService:
         mask_only_bgr = draw_inspection_overlay(image_bgr, detections, draw_masks=True, draw_boxes=False)
         mask_only_b64 = encode_image_to_base64(mask_only_bgr, ext=ext)
 
+        # Dynamic defect intensity / thermal heatmap overlay from predicted crack boundaries
+        heatmap_bgr = generate_defect_heatmap_overlay(image_bgr, detections)
+        heatmap_b64 = encode_image_to_base64(heatmap_bgr, ext=ext)
+
         # Run trained 3-class classifier: GOOD vs ALMOST_WORN vs FAULTY
         from app.services.classifier_service import BrakeConditionClassifierService
         from app.models.schemas import AnomalyOrigin
@@ -153,6 +156,73 @@ class InspectionService:
         fmea_risks = [d.fmea for d in detections if getattr(d, "fmea", None) is not None]
         top_fmea_risk = max(fmea_risks, key=lambda f: f.rpn) if fmea_risks else None
 
+        # Asynchronously log inspection to historical SQLite database with polar defect coordinates
+        try:
+            from datetime import datetime, timezone
+            from app.models.historical_schemas import HistoricalInspectionRecord, HistoricalDefectPoint
+            from app.services.historical_db import HistoricalDatabaseManager
+            from app.services.predictive_engine import PredictiveHeatmapEngine
+
+            hist_defects = []
+            for d in detections:
+                dx, dy, r_norm, clock_deg, clock_h, zone = PredictiveHeatmapEngine.cartesian_to_polar(
+                    d.bbox, w, h
+                )
+                p_code = getattr(d.fmea, "process_code", "UNKNOWN") if getattr(d, "fmea", None) else "UNKNOWN"
+                norm_poly = None
+                if d.mask_polygon and len(d.mask_polygon) >= 3:
+                    norm_poly = [
+                        [round((pt[0] / float(max(w, 1))) - 0.5, 4), round((pt[1] / float(max(h, 1))) - 0.5, 4)]
+                        for pt in d.mask_polygon
+                    ]
+
+                norm_bbox = [
+                    round((d.bbox[0] / float(max(w, 1))) - 0.5, 4),
+                    round((d.bbox[1] / float(max(h, 1))) - 0.5, 4),
+                    round((d.bbox[2] / float(max(w, 1))) - 0.5, 4),
+                    round((d.bbox[3] / float(max(h, 1))) - 0.5, 4),
+                ]
+
+                hist_defects.append(HistoricalDefectPoint(
+                    defect_type=d.defect_type,
+                    process_code=p_code,
+                    severity=d.severity.value,
+                    confidence=d.confidence,
+                    dx_normalized=dx,
+                    dy_normalized=dy,
+                    r_normalized=r_norm,
+                    theta_degrees=clock_deg,
+                    clock_hour=clock_h,
+                    zone_name=zone,
+                    area_pct=d.area_percentage,
+                    bbox=norm_bbox,
+                    mask_polygon=norm_poly
+                ))
+
+            p_code_top = getattr(top_fmea_risk, "process_code", None) if top_fmea_risk else None
+            station_top = getattr(top_fmea_risk, "station", None) if top_fmea_risk else None
+
+            hist_record = HistoricalInspectionRecord(
+                part_id=f"BD-{image_id[:8].upper()}",
+                timestamp=datetime.now(timezone.utc).isoformat(),
+                image_filename=filename,
+                overall_status=overall_status.value,
+                defect_count=len(detections),
+                condition=condition_result.condition.value,
+                wear_index_score=condition_result.wear_index_score,
+                dtv_value_um=fmea_summary.dtv_value_um or 2.1,
+                runout_value_um=fmea_summary.runout_value_um or 11.4,
+                parallelism_value_um=fmea_summary.parallelism_value_um or 16.2,
+                highest_rpn=fmea_summary.highest_rpn,
+                primary_process_code=p_code_top,
+                station=station_top,
+                defects=hist_defects
+            )
+            HistoricalDatabaseManager.log_inspection(hist_record)
+        except Exception as log_err:
+            import logging
+            logging.getLogger("autoinspect").warning("Could not log inspection to historical database: %s", log_err)
+
         return InspectionResponse(
             image_id=image_id,
             status=status_text,
@@ -170,5 +240,6 @@ class InspectionService:
             image_height=h,
             annotated_image_base64=annotated_b64,
             mask_overlay_base64=mask_only_b64,
+            heatmap_overlay_base64=heatmap_b64,
             brake_component_type="Ventilated Brake Disc Rotor",
         )

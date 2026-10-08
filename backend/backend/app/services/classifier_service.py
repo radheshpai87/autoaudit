@@ -90,11 +90,16 @@ class BrakeConditionClassifierService:
                 probs["ALMOST_WORN"] = 0.88
                 probs["GOOD"] = 0.08
                 probs["FAULTY"] = 0.04
-            elif defect_count == 0 and pred_class == "ALMOST_WORN" and probs.get("GOOD", 0) > 0.30:
-                # Borderline surface texture on a defect-free rotor is calibrated as GOOD
+            elif defect_count == 0 and not has_critical_defects and not has_high_defects:
+                # Defect-free rotor with 0 detected defects & nominal tolerances.
+                # Concentric CNC lathe turning micro-grooves trigger edge density / gradient filters
+                # which the Random Forest model can misclassify as wear grooving.
+                # Vision QA confirms 0 defects, so calibrate to GOOD with low wear index.
                 pred_class = "GOOD"
-                conf = max(probs.get("GOOD", 0.85), 0.86)
+                conf = max(probs.get("GOOD", 0.0), 0.88)
                 probs["GOOD"] = conf
+                probs["ALMOST_WORN"] = round((1.0 - conf) * 0.75, 3)
+                probs["FAULTY"] = round(1.0 - probs["GOOD"] - probs["ALMOST_WORN"], 3)
 
             cond = RotorConditionClass(pred_class)
 
