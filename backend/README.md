@@ -10,7 +10,7 @@ AutoInspect AI is an automated visual inspection platform for automotive compone
 The codebase is organized into cleanly decoupled layers to allow seamless upgrades into Phase 2 (DINOv2/PatchCore), Phase 3 (root-cause analysis), and Phase 4/5 (predictive risk):
 
 ```
-autoinspect-ai/
+backend/ (repository workspace renamed from autoinspect-ai)
 ├── backend/
 │   ├── app/
 │   │   ├── main.py                  # FastAPI app entry point & CORS
