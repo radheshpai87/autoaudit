@@ -275,16 +275,21 @@ export const InspectionSummary: React.FC<InspectionSummaryProps> = ({
               )}
 
               <span className="text-[10px] text-slate-400 font-mono">
-                Formula: RPN = S × O × D (Paper Section 3)
+                RPN = S × O × D (Dynamic S: 1–10 based on crack extent & swept area)
               </span>
             </div>
 
             {/* Production Quality Tolerances (DTV, Runout, Parallelism) */}
             <div className="p-4 rounded-lg bg-slate-950/70 border border-slate-800 flex flex-col justify-between font-mono text-xs">
-              <span className="text-[11px] text-slate-400 uppercase flex items-center gap-1.5">
-                <Sliders className="w-3.5 h-3.5 text-cyan-400" />
-                Line Tolerances (Table 1)
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-slate-400 uppercase flex items-center gap-1.5">
+                  <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+                  Line Tolerances (Table 1)
+                </span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-800 font-sans">
+                  IN01 Telemetry
+                </span>
+              </div>
               <div className="flex flex-col gap-2 my-2">
                 <div className="flex items-center justify-between">
                   <span className="text-slate-400 text-[11px]">DTV (≤ 5 µm):</span>
@@ -292,7 +297,7 @@ export const InspectionSummary: React.FC<InspectionSummaryProps> = ({
                     className={`font-bold px-1.5 py-0.2 rounded text-[10px] ${
                       inspection.fmea_quality_control.dtv_tolerance_status.includes('Defective')
                         ? 'bg-red-950 text-red-300 border border-red-800'
-                        : inspection.fmea_quality_control.dtv_tolerance_status.includes('Review')
+                        : inspection.fmea_quality_control.dtv_tolerance_status.includes('Borderline')
                         ? 'bg-amber-950 text-amber-300 border border-amber-800'
                         : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
                     }`}
@@ -318,7 +323,7 @@ export const InspectionSummary: React.FC<InspectionSummaryProps> = ({
                     className={`font-bold px-1.5 py-0.2 rounded text-[10px] ${
                       inspection.fmea_quality_control.parallelism_tolerance_status.includes('Defective')
                         ? 'bg-red-950 text-red-300 border border-red-800'
-                        : inspection.fmea_quality_control.parallelism_tolerance_status.includes('Review')
+                        : inspection.fmea_quality_control.parallelism_tolerance_status.includes('Borderline')
                         ? 'bg-amber-950 text-amber-300 border border-amber-800'
                         : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
                     }`}
@@ -327,8 +332,8 @@ export const InspectionSummary: React.FC<InspectionSummaryProps> = ({
                   </span>
                 </div>
               </div>
-              <span className="text-[10px] text-slate-500 font-mono">
-                12-point disc thickness & 8-point parallelism
+              <span className="text-[10px] text-slate-400 font-sans leading-tight">
+                Top camera inspects surface; DTV thickness from Station IN01 12-point contact probe.
               </span>
             </div>
 

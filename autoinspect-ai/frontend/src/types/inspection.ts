@@ -41,6 +41,10 @@ export interface ProductionLineFMEASummary {
   dtv_tolerance_status: string
   runout_tolerance_status: string
   parallelism_tolerance_status: string
+  dtv_value_um?: number
+  runout_value_um?: number
+  parallelism_value_um?: number
+  sensor_integration_note?: string
   recommended_process_adjustments: string[]
 }
 

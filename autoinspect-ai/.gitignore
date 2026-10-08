@@ -22,4 +22,3 @@ dist/
 *.zip
 dataset_thermal_brake/
 runs/
-*.pt

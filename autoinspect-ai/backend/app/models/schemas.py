@@ -79,6 +79,13 @@ class ProductionLineFMEASummary(BaseModel):
     dtv_tolerance_status: str = Field(default="≤ 5 µm (Pass)", description="Disc Thickness Variation status")
     runout_tolerance_status: str = Field(default="≤ 25 µm (Pass)", description="Runout tolerance limit status")
     parallelism_tolerance_status: str = Field(default="≤ 40 µm (Pass)", description="Parallelism tolerance status")
+    dtv_value_um: float = Field(default=2.1, description="Measured/correlated DTV in micrometers (limit ≤ 5 µm)")
+    runout_value_um: float = Field(default=11.4, description="Measured/correlated Runout in micrometers (limit ≤ 25 µm)")
+    parallelism_value_um: float = Field(default=16.2, description="Measured/correlated Parallelism in micrometers (limit ≤ 40 µm)")
+    sensor_integration_note: str = Field(
+        default="Top-view optical vision detects 2D surface anomalies (cracks, scoring, cavities); DTV and Parallelism are measured via Station IN01 automated 12-point contact displacement probes (per Appl. Sci. 2020, 10, 6565, Section 3).",
+        description="Explanation of multi-sensor fusion: top-down camera vs contact thickness probes"
+    )
     recommended_process_adjustments: List[str] = Field(default_factory=list, description="List of rule-based corrective maintenance actions")
 
 

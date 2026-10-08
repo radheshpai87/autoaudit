@@ -71,11 +71,13 @@ class BrakeConditionClassifierService:
             probs = {cls_name: round(float(prob), 3) for cls_name, prob in zip(classes, probs_arr)}
             conf = float(probs.get(pred_class, 0.9))
 
-            # Only override to FAULTY if the model itself did not detect GOOD
-            if has_critical_defects and pred_class != "GOOD":
+            # If critical structural defect (crack) is present, rotor is FAULTY
+            if has_critical_defects:
                 pred_class = "FAULTY"
-                conf = max(conf, 0.96)
-                probs["FAULTY"] = max(probs.get("FAULTY", 0), 0.96)
+                conf = 0.96
+                probs["FAULTY"] = 0.96
+                probs["GOOD"] = min(probs.get("GOOD", 0.05), 0.02)
+                probs["ALMOST_WORN"] = round(1.0 - probs["FAULTY"] - probs["GOOD"], 3)
             elif defect_count == 0 and pred_class == "ALMOST_WORN" and probs.get("GOOD", 0) > 0.30:
                 # Borderline surface texture on a defect-free rotor is calibrated as GOOD
                 pred_class = "GOOD"
