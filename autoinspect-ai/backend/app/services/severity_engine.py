@@ -376,8 +376,8 @@ class SeverityEngine:
         """
         sensor_note = (
             "Multi-Sensor Architecture: Top-view optical vision detects surface anomalies "
-            "(cracks, scoring, cavities); DTV and Parallelism are measured via Station IN01 automated "
-            "12-point contact displacement probes (per Appl. Sci. 2020, 10, 6565, Section 3)."
+            "(cracks, scoring, cavities); DTV and Parallelism are measured via automated "
+            "12-point contact displacement probes at the final gauge station (per Appl. Sci. 2020, 10, 6565, Section 3)."
         )
 
         if not detections:

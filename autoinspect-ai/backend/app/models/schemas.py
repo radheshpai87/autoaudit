@@ -83,7 +83,7 @@ class ProductionLineFMEASummary(BaseModel):
     runout_value_um: float = Field(default=11.4, description="Measured/correlated Runout in micrometers (limit ≤ 25 µm)")
     parallelism_value_um: float = Field(default=16.2, description="Measured/correlated Parallelism in micrometers (limit ≤ 40 µm)")
     sensor_integration_note: str = Field(
-        default="Top-view optical vision detects 2D surface anomalies (cracks, scoring, cavities); DTV and Parallelism are measured via Station IN01 automated 12-point contact displacement probes (per Appl. Sci. 2020, 10, 6565, Section 3).",
+        default="Top-view optical vision detects 2D surface anomalies (cracks, scoring, cavities); DTV and Parallelism are measured via automated 12-point contact displacement probes at the final gauge station (per Appl. Sci. 2020, 10, 6565, Section 3).",
         description="Explanation of multi-sensor fusion: top-down camera vs contact thickness probes"
     )
     recommended_process_adjustments: List[str] = Field(default_factory=list, description="List of rule-based corrective maintenance actions")

@@ -208,12 +208,19 @@ export const InspectionSummary: React.FC<InspectionSummaryProps> = ({
                 </span>
               </div>
             </div>
-            {inspection.top_fmea_risk && (
+            {inspection.top_fmea_risk ? (
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-mono text-slate-400">Station Code:</span>
-                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-slate-950 text-cyan-300 border border-slate-800">
-                  {inspection.top_fmea_risk.station} [{inspection.top_fmea_risk.process_code}]
+                <span className="text-[11px] font-mono text-slate-400">Visual Effect Code:</span>
+                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700">
+                  {inspection.top_fmea_risk.process_code}
                 </span>
+                <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-950 text-slate-300 border border-slate-800">
+                  {inspection.top_fmea_risk.station}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-mono text-emerald-400">All Stations Pass</span>
               </div>
             )}
           </div>
@@ -238,6 +245,60 @@ export const InspectionSummary: React.FC<InspectionSummaryProps> = ({
               </span>
             </div>
           </div>
+
+          {/* Visual Effect Code & Machine Root Cause Details */}
+          {inspection.top_fmea_risk && (
+            <div className="p-4 rounded-lg bg-slate-950/90 border border-indigo-900/70 flex flex-col gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800/80">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-bold px-2.5 py-1 rounded bg-indigo-900/60 text-indigo-200 border border-indigo-600/60 uppercase">
+                    Visual Effect Code: {inspection.top_fmea_risk.process_code}
+                  </span>
+                  <span className="text-xs font-mono text-slate-300">
+                    Station: <span className="font-semibold text-white">{inspection.top_fmea_risk.station}</span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-amber-300">
+                    FMEA Tier: {inspection.top_fmea_risk.rpn_rank_tier} (RPN {inspection.top_fmea_risk.rpn})
+                  </span>
+                  {inspection.top_fmea_risk.associated_quality_defect && (
+                    <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">
+                      Defect: {inspection.top_fmea_risk.associated_quality_defect}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div className="p-2.5 rounded bg-slate-900/70 border border-slate-800">
+                  <span className="text-[10px] font-mono text-cyan-400 block uppercase font-bold mb-1">
+                    Visual Effect & Quality Impact
+                  </span>
+                  <div className="text-slate-200 font-semibold mb-1">
+                    {inspection.top_fmea_risk.potential_failure_mode}
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed m-0">
+                    {inspection.top_fmea_risk.potential_failure_effects}
+                  </p>
+                </div>
+
+                <div className="p-2.5 rounded bg-slate-900/70 border border-slate-800">
+                  <span className="text-[10px] font-mono text-amber-400 block uppercase font-bold mb-1">
+                    Machine Mechanism & Root Cause Reason
+                  </span>
+                  <div className="text-slate-200 font-semibold mb-1">
+                    {inspection.top_fmea_risk.potential_causes}
+                  </div>
+                  {inspection.top_fmea_risk.current_control_detection && (
+                    <p className="text-[11px] text-slate-400 leading-relaxed m-0">
+                      <strong className="text-slate-300 font-mono">Control / Detection:</strong> {inspection.top_fmea_risk.current_control_detection}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* FMEA Metric Indicators: RPN Gauge, Tolerance Limits, Process Parameters */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -286,8 +347,8 @@ export const InspectionSummary: React.FC<InspectionSummaryProps> = ({
                   <Sliders className="w-3.5 h-3.5 text-cyan-400" />
                   Line Tolerances (Table 1)
                 </span>
-                <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-800 font-sans">
-                  IN01 Telemetry
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-800 font-sans">
+                  Automated Gauge Telemetry
                 </span>
               </div>
               <div className="flex flex-col gap-2 my-2">
@@ -333,7 +394,7 @@ export const InspectionSummary: React.FC<InspectionSummaryProps> = ({
                 </div>
               </div>
               <span className="text-[10px] text-slate-400 font-sans leading-tight">
-                Top camera inspects surface; DTV thickness from Station IN01 12-point contact probe.
+                Top camera segments surface defects; DTV thickness & runout captured from 12-point displacement gauge (Appl. Sci. 2020).
               </span>
             </div>
 
