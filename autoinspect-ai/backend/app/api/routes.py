@@ -70,16 +70,32 @@ def get_sample_image(sample_name: str):
         "bonnet_split": "backend/samples/sample_bonnet_split.jpg",
         "bonnet_pimple": "backend/samples/sample_bonnet_pimple.jpg",
         "bonnet_burr": "backend/samples/sample_bonnet_burr.jpg",
+        # Real Stamped Car Bonnet Photography Presets
+        "hood_dent": "backend/samples/hood_dent_studio.png",
+        "hood_dent_studio": "backend/samples/hood_dent_studio.png",
+        "01_hood_with_dent": "backend/samples/hood_dent_studio.png",
+        "hood_clean": "backend/samples/hood_clean_studio.png",
+        "hood_clean_studio": "backend/samples/hood_clean_studio.png",
+        "02_clean_hood": "backend/samples/hood_clean_studio.png",
+        "hood_clean_alt": "backend/samples/hood_clean_alternate.png",
+        "hood_clean_alternate": "backend/samples/hood_clean_alternate.png",
+        "03_clean_hood_alternate": "backend/samples/hood_clean_alternate.png",
+        "hood_dent_workshop": "backend/samples/hood_dent_workshop.png",
+        "04_hood_with_dent_workshop": "backend/samples/hood_dent_workshop.png",
     }
     rel_path = valid_samples.get(sample_name.lower())
     if not rel_path or not os.path.exists(rel_path):
         alt_path = os.path.join(os.path.dirname(__file__), "../../../", rel_path) if rel_path else None
         if alt_path and os.path.exists(alt_path):
-            return FileResponse(alt_path, media_type="image/jpeg")
+            m_type = "image/png" if alt_path.lower().endswith(".png") else "image/jpeg"
+            return FileResponse(alt_path, media_type=m_type)
         if rel_path and os.path.exists(rel_path.replace("backend/", "")):
-            return FileResponse(rel_path.replace("backend/", ""), media_type="image/jpeg")
+            r_path = rel_path.replace("backend/", "")
+            m_type = "image/png" if r_path.lower().endswith(".png") else "image/jpeg"
+            return FileResponse(r_path, media_type=m_type)
         raise HTTPException(status_code=404, detail="Sample image not found")
-    return FileResponse(rel_path, media_type="image/jpeg")
+    m_type = "image/png" if rel_path.lower().endswith(".png") else "image/jpeg"
+    return FileResponse(rel_path, media_type=m_type)
 
 
 @router.get("/analytics", response_model=HistoricalAnalyticsResponse)

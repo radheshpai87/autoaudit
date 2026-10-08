@@ -120,7 +120,12 @@ export function App() {
       crack: 'sample_rotor_crack.jpg',
       surface: 'sample_surface_defect.jpg',
       anomaly: 'sample_rotor_unknown_anomaly.jpg',
-      // Bonnet presets
+      // Real Stamped Bonnet Photography Presets
+      hood_clean: '02_clean_hood.png',
+      hood_dent: '01_hood_with_dent.png',
+      hood_clean_alt: '03_clean_hood_alternate.png',
+      hood_dent_workshop: '04_hood_with_dent_workshop.png',
+      // Synthetic Bonnet presets
       bonnet_good: 'sample_bonnet_good.jpg',
       bonnet_dent: 'sample_bonnet_dent.jpg',
       bonnet_split: 'sample_bonnet_split.jpg',
@@ -136,7 +141,8 @@ export function App() {
         throw new Error(`Failed to fetch sample (${res.statusText})`)
       }
       const blob = await res.blob()
-      const testFile = new File([blob], filename, { type: 'image/jpeg' })
+      const mimeType = blob.type || (filename.endsWith('.png') ? 'image/png' : 'image/jpeg')
+      const testFile = new File([blob], filename, { type: mimeType })
       setSelectedFile(testFile)
       setOriginalImageUrl(URL.createObjectURL(blob))
       await runInspection(testFile)
@@ -214,34 +220,44 @@ export function App() {
                   {selectedComponent === 'car_bonnet' ? (
                     <>
                       <button
-                        onClick={() => loadQuickSample('bonnet_good')}
+                        onClick={() => loadQuickSample('hood_clean')}
                         className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-emerald-300 font-mono transition-colors border border-emerald-800/80 font-bold"
+                        title="02_clean_hood.png - Flawless Class-A surface under inspection studio lighting"
                       >
-                        1. CONFORMING BONNET (Pass)
+                        1. REAL CLEAN HOOD (Pass)
                       </button>
                       <button
-                        onClick={() => loadQuickSample('bonnet_dent')}
+                        onClick={() => loadQuickSample('hood_dent')}
                         className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 font-mono transition-colors border border-amber-800/80 font-bold"
+                        title="01_hood_with_dent.png - Impact dent localized in Zone C (Center Spine / DC02)"
                       >
-                        2. PDR REWORK DENT (Review)
+                        2. REAL HOOD DENT (Review)
+                      </button>
+                      <button
+                        onClick={() => loadQuickSample('hood_clean_alt')}
+                        className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-teal-300 font-mono transition-colors border border-teal-800/80 font-bold"
+                        title="03_clean_hood_alternate.png - Clean hood with specular lighting reflection"
+                      >
+                        3. CLEAN HOOD ALT LIGHT (Pass)
+                      </button>
+                      <button
+                        onClick={() => loadQuickSample('hood_dent_workshop')}
+                        className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-orange-300 font-mono transition-colors border border-orange-800/80 font-bold"
+                        title="04_hood_with_dent_workshop.png - Real hood dent mounted on factory inspection fixture"
+                      >
+                        4. WORKSHOP HOOD DENT (Review)
                       </button>
                       <button
                         onClick={() => loadQuickSample('bonnet_split')}
                         className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-rose-300 font-mono transition-colors border border-rose-800/80 font-bold"
                       >
-                        3. STAMPING DRAW SPLIT (Scrap)
+                        5. DRAW SPLIT (Scrap)
                       </button>
                       <button
                         onClick={() => loadQuickSample('bonnet_pimple')}
                         className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-blue-300 font-mono transition-colors border border-blue-800/80 font-bold"
                       >
-                        4. DIE PIMPLE (Review)
-                      </button>
-                      <button
-                        onClick={() => loadQuickSample('bonnet_burr')}
-                        className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-purple-300 font-mono transition-colors border border-purple-900/80 font-bold"
-                      >
-                        5. HEMMING BURR (Review)
+                        6. DIE PIMPLE (Review)
                       </button>
                     </>
                   ) : (
