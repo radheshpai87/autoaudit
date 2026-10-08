@@ -1,4 +1,5 @@
-import type { Inspection, InspectorReview } from "./types";
+import type { FMEAEvaluation, Inspection, InspectorReview, ProductionLineFMEASummary } from "./types";
+export type { FMEAEvaluation, ProductionLineFMEASummary } from "./types";
 
 export interface AutoAuditApi {
   listInspections(): Promise<Inspection[]>;
@@ -35,6 +36,9 @@ export interface InspectApiResponse {
   image_width: number;
   image_height: number;
   brake_component_type?: string;
+  primary_anomaly_origin?: "thermal" | "surface_level" | "unknown" | null;
+  top_fmea_risk?: FMEAEvaluation | null;
+  fmea_quality_control?: ProductionLineFMEASummary | null;
   condition_classification: {
     condition: "GOOD" | "ALMOST_WORN" | "FAULTY";
     confidence: number;
@@ -45,12 +49,14 @@ export interface InspectApiResponse {
     defect_type: string;
     confidence: number;
     severity: "low" | "medium" | "high" | "critical";
+    is_unknown_anomaly?: boolean;
     bbox: [number, number, number, number];
     area_percentage: number;
     location?: string;
     mask_polygon?: Array<[number, number]> | null;
     explanation?: string;
     recommendation?: string;
+    fmea?: FMEAEvaluation | null;
   }>;
 }
 
