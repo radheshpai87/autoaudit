@@ -8,7 +8,8 @@ numpy>=1.26.0
 opencv-python-headless>=4.9.0.80
 httpx>=0.27.0
 pytest>=8.0.0
-# Optional / Model dependencies (uncomment if using PyTorch / Ultralytics):
-# torch>=2.2.0
-# torchvision>=0.17.0
-# ultralytics>=8.1.0
+# Real YOLO weights and trained condition-classifier dependencies.
+# For CPU-only hosts, install CPU wheels for torch/torchvision first:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+ultralytics>=8.1.0
+scikit-learn>=1.3.0
