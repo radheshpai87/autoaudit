@@ -1,0 +1,7 @@
+*.pt
+*.venv
+.venv/
+node_modules/
+dist/
+__pycache__/
+*.pyc

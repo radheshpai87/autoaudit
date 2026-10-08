@@ -10,6 +10,10 @@ import {
   Wrench,
   FileText,
   Disc,
+  Gauge,
+  ShieldAlert,
+  Sliders,
+  Cpu,
 } from 'lucide-react'
 import type { InspectionResponse, SeverityLevel, OverallStatus } from '../types/inspection'
 
@@ -179,6 +183,240 @@ export const InspectionSummary: React.FC<InspectionSummaryProps> = ({
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 1.75. Applied Sciences 2020 FMEA Quality Control Decision Support System */}
+      {inspection.fmea_quality_control && (
+        <div className="bg-slate-900/90 border border-indigo-900/60 rounded-xl p-5 shadow-lg flex flex-col gap-4 ring-1 ring-indigo-500/20">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-slate-800 gap-2">
+            <div className="flex items-center gap-2">
+              <span className="p-1 rounded bg-indigo-950 text-indigo-400 border border-indigo-700">
+                <Cpu className="w-4 h-4" />
+              </span>
+              <div>
+                <h3 className="text-xs font-mono font-bold tracking-wider text-indigo-300 uppercase m-0 flex items-center gap-2">
+                  <span>FMEA Quality Control Decision Support System</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 font-sans font-normal">
+                    Appl. Sci. 2020, 10, 6565
+                  </span>
+                </h3>
+                <span className="text-[10px] text-slate-400 font-sans">
+                  Rule-based manufacturing line DSS for brake disc grinding, balancing & pick-up stations
+                </span>
+              </div>
+            </div>
+            {inspection.top_fmea_risk ? (
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-mono text-slate-400">Visual Effect Code:</span>
+                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700">
+                  {inspection.top_fmea_risk.process_code}
+                </span>
+                <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-950 text-slate-300 border border-slate-800">
+                  {inspection.top_fmea_risk.station}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-mono text-emerald-400">All Stations Pass</span>
+              </div>
+            )}
+          </div>
+
+          {/* Decision Alert Banner */}
+          <div
+            className={`p-3.5 rounded-lg border text-xs flex items-start gap-3 ${
+              inspection.fmea_quality_control.highest_rpn >= 100
+                ? 'bg-red-950/70 border-red-700/80 text-red-200'
+                : inspection.fmea_quality_control.highest_rpn >= 70
+                ? 'bg-amber-950/70 border-amber-700/80 text-amber-200'
+                : 'bg-emerald-950/70 border-emerald-700/80 text-emerald-200'
+            }`}
+          >
+            <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5 text-current" />
+            <div className="flex flex-col gap-0.5">
+              <span className="font-mono font-bold uppercase tracking-wider text-[11px]">
+                DSS Line Action: {inspection.fmea_quality_control.rpn_priority_tier}
+              </span>
+              <span className="font-sans text-xs leading-relaxed opacity-95">
+                {inspection.fmea_quality_control.line_decision}
+              </span>
+            </div>
+          </div>
+
+          {/* Visual Effect Code & Machine Root Cause Details */}
+          {inspection.top_fmea_risk && (
+            <div className="p-4 rounded-lg bg-slate-950/90 border border-indigo-900/70 flex flex-col gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800/80">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-bold px-2.5 py-1 rounded bg-indigo-900/60 text-indigo-200 border border-indigo-600/60 uppercase">
+                    Visual Effect Code: {inspection.top_fmea_risk.process_code}
+                  </span>
+                  <span className="text-xs font-mono text-slate-300">
+                    Station: <span className="font-semibold text-white">{inspection.top_fmea_risk.station}</span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-amber-300">
+                    FMEA Tier: {inspection.top_fmea_risk.rpn_rank_tier} (RPN {inspection.top_fmea_risk.rpn})
+                  </span>
+                  {inspection.top_fmea_risk.associated_quality_defect && (
+                    <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">
+                      Defect: {inspection.top_fmea_risk.associated_quality_defect}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div className="p-2.5 rounded bg-slate-900/70 border border-slate-800">
+                  <span className="text-[10px] font-mono text-cyan-400 block uppercase font-bold mb-1">
+                    Visual Effect & Quality Impact
+                  </span>
+                  <div className="text-slate-200 font-semibold mb-1">
+                    {inspection.top_fmea_risk.potential_failure_mode}
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed m-0">
+                    {inspection.top_fmea_risk.potential_failure_effects}
+                  </p>
+                </div>
+
+                <div className="p-2.5 rounded bg-slate-900/70 border border-slate-800">
+                  <span className="text-[10px] font-mono text-amber-400 block uppercase font-bold mb-1">
+                    Machine Mechanism & Root Cause Reason
+                  </span>
+                  <div className="text-slate-200 font-semibold mb-1">
+                    {inspection.top_fmea_risk.potential_causes}
+                  </div>
+                  {inspection.top_fmea_risk.current_control_detection && (
+                    <p className="text-[11px] text-slate-400 leading-relaxed m-0">
+                      <strong className="text-slate-300 font-mono">Control / Detection:</strong> {inspection.top_fmea_risk.current_control_detection}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* FMEA Metric Indicators: RPN Gauge, Tolerance Limits, Process Parameters */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Risk Priority Number (RPN) Card */}
+            <div className="p-4 rounded-lg bg-slate-950/70 border border-slate-800 flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono text-slate-400 uppercase flex items-center gap-1.5">
+                  <Gauge className="w-3.5 h-3.5 text-indigo-400" />
+                  Risk Priority Number (RPN)
+                </span>
+                <span className="text-xs font-mono font-bold text-indigo-300">
+                  {inspection.fmea_quality_control.highest_rpn} / 1000
+                </span>
+              </div>
+
+              {inspection.top_fmea_risk ? (
+                <div className="my-2 p-2 rounded bg-slate-900 border border-slate-800/80 font-mono text-xs flex justify-around text-center">
+                  <div>
+                    <span className="text-[10px] text-slate-500 block">Severity (S)</span>
+                    <span className="font-bold text-red-400 text-sm">{inspection.top_fmea_risk.severity_s}</span>
+                  </div>
+                  <span className="text-slate-600 self-center">×</span>
+                  <div>
+                    <span className="text-[10px] text-slate-500 block">Occurrence (O)</span>
+                    <span className="font-bold text-amber-400 text-sm">{inspection.top_fmea_risk.occurrence_o}</span>
+                  </div>
+                  <span className="text-slate-600 self-center">×</span>
+                  <div>
+                    <span className="text-[10px] text-slate-500 block">Detection (D)</span>
+                    <span className="font-bold text-cyan-400 text-sm">{inspection.top_fmea_risk.detection_d}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="my-2 text-center text-xs text-slate-500 font-mono">No active failure mode</div>
+              )}
+
+              <span className="text-[10px] text-slate-400 font-mono">
+                RPN = S × O × D (Dynamic S: 1–10 based on crack extent & swept area)
+              </span>
+            </div>
+
+            {/* Production Quality Tolerances (DTV, Runout, Parallelism) */}
+            <div className="p-4 rounded-lg bg-slate-950/70 border border-slate-800 flex flex-col justify-between font-mono text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-slate-400 uppercase flex items-center gap-1.5">
+                  <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+                  Line Tolerances (Table 1)
+                </span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-800 font-sans">
+                  Automated Gauge Telemetry
+                </span>
+              </div>
+              <div className="flex flex-col gap-2 my-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 text-[11px]">DTV (≤ 5 µm):</span>
+                  <span
+                    className={`font-bold px-1.5 py-0.2 rounded text-[10px] ${
+                      inspection.fmea_quality_control.dtv_tolerance_status.includes('Defective')
+                        ? 'bg-red-950 text-red-300 border border-red-800'
+                        : inspection.fmea_quality_control.dtv_tolerance_status.includes('Borderline')
+                        ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                        : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                    }`}
+                  >
+                    {inspection.fmea_quality_control.dtv_tolerance_status}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 text-[11px]">Runout (≤ 25 µm):</span>
+                  <span
+                    className={`font-bold px-1.5 py-0.2 rounded text-[10px] ${
+                      inspection.fmea_quality_control.runout_tolerance_status.includes('Defective')
+                        ? 'bg-red-950 text-red-300 border border-red-800'
+                        : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                    }`}
+                  >
+                    {inspection.fmea_quality_control.runout_tolerance_status}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 text-[11px]">Parallelism (≤ 40 µm):</span>
+                  <span
+                    className={`font-bold px-1.5 py-0.2 rounded text-[10px] ${
+                      inspection.fmea_quality_control.parallelism_tolerance_status.includes('Defective')
+                        ? 'bg-red-950 text-red-300 border border-red-800'
+                        : inspection.fmea_quality_control.parallelism_tolerance_status.includes('Borderline')
+                        ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                        : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                    }`}
+                  >
+                    {inspection.fmea_quality_control.parallelism_tolerance_status}
+                  </span>
+                </div>
+              </div>
+              <span className="text-[10px] text-slate-400 font-sans leading-tight">
+                Top camera segments surface defects; DTV thickness & runout captured from 12-point displacement gauge (Appl. Sci. 2020).
+              </span>
+            </div>
+
+            {/* Recommended Line Corrective Actions */}
+            <div className="p-4 rounded-lg bg-slate-950/70 border border-slate-800 flex flex-col justify-between">
+              <span className="text-[11px] font-mono text-slate-400 uppercase flex items-center gap-1.5">
+                <Wrench className="w-3.5 h-3.5 text-amber-400" />
+                Rule Corrective Action (DSS)
+              </span>
+              <div className="my-2 flex flex-col gap-1.5">
+                {inspection.fmea_quality_control.recommended_process_adjustments.slice(0, 2).map((adj, i) => (
+                  <div key={i} className="text-xs text-slate-300 font-sans leading-snug flex items-start gap-1.5">
+                    <span className="text-cyan-400 font-mono font-bold">›</span>
+                    <span>{adj}</span>
+                  </div>
+                ))}
+              </div>
+              {inspection.top_fmea_risk && (
+                <span className="text-[10px] text-slate-500 font-mono truncate" title={inspection.top_fmea_risk.potential_causes}>
+                  Cause: {inspection.top_fmea_risk.potential_causes}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -379,6 +617,14 @@ export const InspectionSummary: React.FC<InspectionSummaryProps> = ({
                           : 'Unknown'}
                       </span>
                     )}
+                    {defect.fmea && (
+                      <span
+                        className="text-[9px] font-mono px-1.5 py-0.2 rounded border bg-indigo-950/80 text-indigo-300 border-indigo-700/80 font-bold"
+                        title={`${defect.fmea.station}: ${defect.fmea.potential_failure_mode} (S=${defect.fmea.severity_s}, O=${defect.fmea.occurrence_o}, D=${defect.fmea.detection_d})`}
+                      >
+                        {defect.fmea.process_code} (RPN {defect.fmea.rpn})
+                      </span>
+                    )}
                     {defect.is_unknown_anomaly && (
                       <span className="text-[10px] px-1 rounded bg-purple-950 text-purple-300 border border-purple-800">
                         Low Class Conf
@@ -404,6 +650,21 @@ export const InspectionSummary: React.FC<InspectionSummaryProps> = ({
                     </span>
                   </div>
                 </div>
+
+                {/* FMEA Process & DSS Action Details */}
+                {defect.fmea && (
+                  <div className="text-[11px] text-slate-300 pl-8 pr-2 font-sans bg-slate-950/50 p-2 rounded border border-indigo-900/40 flex flex-col gap-1">
+                    <div className="flex flex-wrap items-center gap-2 font-mono text-[10px]">
+                      <span className="text-indigo-400 font-bold">Station: {defect.fmea.station} [{defect.fmea.process_code}]</span>
+                      <span className="text-slate-400">({defect.fmea.rpn_rank_tier})</span>
+                      <span className="text-amber-400 font-bold ml-auto">RPN = {defect.fmea.rpn} (S={defect.fmea.severity_s}, O={defect.fmea.occurrence_o}, D={defect.fmea.detection_d})</span>
+                    </div>
+                    <div className="text-[11px] text-cyan-200 flex items-start gap-1.5">
+                      <Wrench className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
+                      <span>{defect.fmea.recommended_action}</span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Inline Defect Explanation if secondary */}
                 {idx > 0 && defect.explanation && (

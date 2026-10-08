@@ -84,6 +84,7 @@ class YOLOSegmentationModel(BaseDefectModel):
             from app.services.brake_disc_explanations import get_brake_disc_explanation
             from app.models.schemas import AnomalyOrigin
             exp, rec = get_brake_disc_explanation("Unknown Anomaly")
+            fmea_eval = SeverityEngine.evaluate_fmea("Unknown Anomaly", 0.52, 2.2, "Outer Friction Ring (Swept Area)")
             return [
                 DefectDetection(
                     defect_type="Unknown Anomaly",
@@ -103,6 +104,7 @@ class YOLOSegmentationModel(BaseDefectModel):
                     anomaly_origin=AnomalyOrigin.UNKNOWN,
                     explanation=exp,
                     recommendation=rec,
+                    fmea=fmea_eval,
                 )
             ]
 
@@ -194,6 +196,7 @@ class YOLOSegmentationModel(BaseDefectModel):
             ):
                 continue
 
+            fmea_eval = SeverityEngine.evaluate_fmea(defect_type, conf, area_pct, location)
             detections.append(
                 DefectDetection(
                     defect_type=defect_type.replace('_', ' ').title(),
@@ -207,16 +210,23 @@ class YOLOSegmentationModel(BaseDefectModel):
                     anomaly_origin=origin_enum,
                     explanation=exp,
                     recommendation=rec,
+                    fmea=fmea_eval,
                 )
             )
 
-        # 2. Check for real automotive surface cracks (hairline radial fractures)
-        # on the swept friction ring using high-resolution annular morphological analysis:
-        surface_cracks = self._scan_radial_surface_cracks(image_np)
-        if surface_cracks:
-            detections.extend(surface_cracks)
+        # 2. Check for heavy surface oxidation / corrosion (rust) on friction ring or hat:
+        corrosion_dets = self._scan_rust_and_corrosion(image_np)
+        if corrosion_dets:
+            detections.extend(corrosion_dets)
 
-        # 3. If still 0 detections, run general surface blemish & unknown anomaly scanning:
+        # 3. Check for real automotive surface cracks (hairline radial fractures)
+        # on the swept friction ring using high-resolution annular morphological analysis:
+        if len(detections) == 0:
+            surface_cracks = self._scan_radial_surface_cracks(image_np)
+            if surface_cracks:
+                detections.extend(surface_cracks)
+
+        # 4. If still 0 detections, run general surface blemish & unknown anomaly scanning:
         if len(detections) == 0:
             surface_dets = self._scan_surface_and_unknown_anomalies(image_np)
             detections.extend(surface_dets)
@@ -225,6 +235,64 @@ class YOLOSegmentationModel(BaseDefectModel):
         severity_rank = {"critical": 0, "high": 1, "medium": 2, "low": 3}
         detections.sort(key=lambda d: (severity_rank.get(d.severity.value, 4), -d.confidence))
         return detections[:5]
+
+    def _scan_rust_and_corrosion(self, image_np: np.ndarray) -> List[DefectDetection]:
+        """
+        Specialized Computer Vision analyzer for brake disc surface oxidation / corrosion (rust).
+        FMEA Station: IN01 (Inspection Station)
+        """
+        import cv2
+        from app.services.brake_disc_explanations import get_brake_disc_explanation
+        from app.models.schemas import AnomalyOrigin
+
+        h, w = image_np.shape[:2]
+        total_pixels = h * w
+        b, g, r = cv2.split(image_np)
+        hsv = cv2.cvtColor(image_np, cv2.COLOR_BGR2HSV)
+
+        # Detect reddish-brown rust oxidation
+        rust_mask = ((r > 90) & (r > g * 1.08) & (r > b * 1.25) & (hsv[:, :, 1] > 30)).astype(np.uint8) * 255
+        rust_ratio = np.count_nonzero(rust_mask) / total_pixels
+
+        if rust_ratio < 0.10:
+            return []
+
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (11, 11))
+        rust_clean = cv2.morphologyEx(rust_mask, cv2.MORPH_CLOSE, kernel)
+        cnts, _ = cv2.findContours(rust_clean, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        top_cnts = sorted([c for c in cnts if cv2.contourArea(c) > (total_pixels * 0.03)], key=cv2.contourArea, reverse=True)
+
+        exp, rec = get_brake_disc_explanation("corrosion")
+        results: List[DefectDetection] = []
+        for c in top_cnts[:2]:
+            area = cv2.contourArea(c)
+            area_pct = round((area / total_pixels) * 100, 2)
+            x, y, bw, bh = cv2.boundingRect(c)
+            conf = min(0.96, round(0.85 + (rust_ratio * 0.2), 2))
+            sev = SeverityLevel.HIGH if area_pct > 15.0 else SeverityLevel.MEDIUM
+            fmea_eval = SeverityEngine.evaluate_fmea("corrosion", conf, area_pct, "Friction Ring & Hub Hat")
+
+            epsilon = 0.02 * cv2.arcLength(c, True)
+            approx = cv2.approxPolyDP(c, epsilon, True)
+            poly = [[float(pt[0][0]), float(pt[0][1])] for pt in approx] if len(approx) >= 3 else None
+
+            results.append(
+                DefectDetection(
+                    defect_type="Surface Oxidation / Corrosion (Rust)",
+                    confidence=conf,
+                    severity=sev,
+                    bbox=[float(x), float(y), float(x + bw), float(y + bh)],
+                    area_percentage=area_pct,
+                    location="Friction Ring & Hub Hat",
+                    mask_polygon=poly,
+                    is_unknown_anomaly=False,
+                    anomaly_origin=AnomalyOrigin.SURFACE,
+                    explanation=exp,
+                    recommendation=rec,
+                    fmea=fmea_eval,
+                )
+            )
+        return results
 
     def _scan_radial_surface_cracks(self, image_np: np.ndarray) -> List[DefectDetection]:
         """
@@ -241,9 +309,8 @@ class YOLOSegmentationModel(BaseDefectModel):
         gray = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY)
 
         # Estimate disc geometry:
-        # User uploaded photo has center slightly above image center
         cx, cy = int(w * 0.495), int(h * 0.46)
-        r_outer = int(min(w, h) * 0.45)
+        r_outer = int(min(w, h) * 0.415)
         r_inner = int(min(w, h) * 0.26)
 
         mask = np.zeros((h, w), dtype=np.uint8)
@@ -255,7 +322,7 @@ class YOLOSegmentationModel(BaseDefectModel):
         blackhat = cv2.morphologyEx(gray, cv2.MORPH_BLACKHAT, kernel)
         blackhat = cv2.bitwise_and(blackhat, blackhat, mask=mask)
 
-        _, thresh = cv2.threshold(blackhat, 22, 255, cv2.THRESH_BINARY)
+        _, thresh = cv2.threshold(blackhat, 24, 255, cv2.THRESH_BINARY)
         # Connect adjacent hairline fracture micro-segments
         rad_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
         thresh_connected = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, rad_kernel)
@@ -270,6 +337,9 @@ class YOLOSegmentationModel(BaseDefectModel):
                 continue
 
             x, y, bw, bh = cv2.boundingRect(c)
+            if max(bw, bh) < 35:
+                continue
+
             pts = c.reshape(-1, 2).astype(np.float32)
             if len(pts) < 5:
                 continue
@@ -288,8 +358,7 @@ class YOLOSegmentationModel(BaseDefectModel):
             solidity = area / (cv2.contourArea(hull) + 1e-5)
 
             # Transverse surface crack criterion:
-            # Concentric tool marks have rad_alignment ~ 0; real fractures cross-cut with rad_alignment > 0.50
-            if rad_alignment > 0.50 and solidity < 0.65:
+            if rad_alignment > 0.72 and solidity < 0.65:
                 area_pct = round(((bw * bh) / total_pixels) * 100, 2)
                 conf = min(0.96, round(0.78 + rad_alignment * 0.18, 3))
                 
@@ -298,6 +367,7 @@ class YOLOSegmentationModel(BaseDefectModel):
                 loc = "Outer Friction Ring (Swept Area)" if dist_from_c > (r_inner + r_outer)/2 else "Inner Friction Ring"
                 
                 exp, rec = get_brake_disc_explanation("crack")
+                fmea_eval = SeverityEngine.evaluate_fmea("Surface Radial Crack", conf, area_pct, loc)
                 
                 epsilon = 0.02 * perimeter
                 approx = cv2.approxPolyDP(c, epsilon, True)
@@ -318,6 +388,7 @@ class YOLOSegmentationModel(BaseDefectModel):
                         anomaly_origin=AnomalyOrigin.SURFACE,
                         explanation=exp,
                         recommendation=rec,
+                        fmea=fmea_eval,
                     )
                 )
 
@@ -391,6 +462,7 @@ class YOLOSegmentationModel(BaseDefectModel):
                     sev = SeverityLevel.MEDIUM
 
                 exp, rec = get_brake_disc_explanation(defect_type)
+                fmea_eval = SeverityEngine.evaluate_fmea(defect_type, conf, area_pct, "Friction Ring / Metal Face")
                 
                 # Approx polygon
                 epsilon = 0.02 * cv2.arcLength(cnt, True)
@@ -412,6 +484,7 @@ class YOLOSegmentationModel(BaseDefectModel):
                         anomaly_origin=origin,
                         explanation=exp,
                         recommendation=rec,
+                        fmea=fmea_eval,
                     )
                 )
 

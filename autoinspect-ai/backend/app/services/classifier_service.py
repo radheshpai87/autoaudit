@@ -46,6 +46,7 @@ class BrakeConditionClassifierService:
         cls,
         image_bgr: np.ndarray,
         has_critical_defects: bool = False,
+        has_high_defects: bool = False,
         defect_count: int = 0,
     ) -> ConditionClassification:
         model = cls.get_model()
@@ -57,6 +58,11 @@ class BrakeConditionClassifierService:
                 conf = 0.95
                 probs = {"FAULTY": 0.95, "ALMOST_WORN": 0.04, "GOOD": 0.01}
                 wear_score = 92.0
+            elif has_high_defects:
+                cond = RotorConditionClass.ALMOST_WORN
+                conf = 0.88
+                probs = {"ALMOST_WORN": 0.88, "FAULTY": 0.08, "GOOD": 0.04}
+                wear_score = 68.0
             else:
                 cond = RotorConditionClass.GOOD
                 conf = 0.90
@@ -71,11 +77,19 @@ class BrakeConditionClassifierService:
             probs = {cls_name: round(float(prob), 3) for cls_name, prob in zip(classes, probs_arr)}
             conf = float(probs.get(pred_class, 0.9))
 
-            # Only override to FAULTY if the model itself did not detect GOOD
-            if has_critical_defects and pred_class != "GOOD":
+            # If critical structural defect (crack) is present, rotor is FAULTY
+            if has_critical_defects:
                 pred_class = "FAULTY"
-                conf = max(conf, 0.96)
-                probs["FAULTY"] = max(probs.get("FAULTY", 0), 0.96)
+                conf = 0.96
+                probs["FAULTY"] = 0.96
+                probs["GOOD"] = min(probs.get("GOOD", 0.05), 0.02)
+                probs["ALMOST_WORN"] = round(1.0 - probs["FAULTY"] - probs["GOOD"], 3)
+            elif has_high_defects and pred_class == "GOOD":
+                pred_class = "ALMOST_WORN"
+                conf = 0.88
+                probs["ALMOST_WORN"] = 0.88
+                probs["GOOD"] = 0.08
+                probs["FAULTY"] = 0.04
             elif defect_count == 0 and pred_class == "ALMOST_WORN" and probs.get("GOOD", 0) > 0.30:
                 # Borderline surface texture on a defect-free rotor is calibrated as GOOD
                 pred_class = "GOOD"
