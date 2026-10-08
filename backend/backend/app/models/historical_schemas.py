@@ -16,6 +16,8 @@ class HistoricalDefectPoint(BaseModel):
     area_pct: float
     bbox: List[float] = Field(default_factory=list)
     mask_polygon: Optional[List[List[float]]] = None
+    image_width: Optional[int] = None
+    image_height: Optional[int] = None
 
 
 class HistoricalInspectionRecord(BaseModel):
@@ -63,6 +65,9 @@ class HeatmapBin(BaseModel):
     bbox: List[float] = Field(default_factory=list)
     mask_polygon: Optional[List[List[float]]] = None
     area_pct: float = 0.5
+    severity: Optional[str] = None
+    image_width: Optional[int] = None
+    image_height: Optional[int] = None
 
 
 class MachineHeatmapData(BaseModel):

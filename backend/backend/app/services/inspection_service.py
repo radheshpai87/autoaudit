@@ -196,7 +196,9 @@ class InspectionService:
                     zone_name=zone,
                     area_pct=d.area_percentage,
                     bbox=norm_bbox,
-                    mask_polygon=norm_poly
+                    mask_polygon=norm_poly,
+                    image_width=w,
+                    image_height=h
                 ))
 
             p_code_top = getattr(top_fmea_risk, "process_code", None) if top_fmea_risk else None

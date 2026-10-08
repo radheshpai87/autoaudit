@@ -76,6 +76,12 @@ class HistoricalDatabaseManager:
             except Exception:
                 pass
 
+            existing_columns = {row[1] for row in cursor.execute("PRAGMA table_info(defect_points);")}
+            if "image_width" not in existing_columns:
+                cursor.execute("ALTER TABLE defect_points ADD COLUMN image_width INTEGER;")
+            if "image_height" not in existing_columns:
+                cursor.execute("ALTER TABLE defect_points ADD COLUMN image_height INTEGER;")
+
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_inspections_timestamp ON inspections(timestamp);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_defect_process_code ON defect_points(process_code);")
             conn.commit()
@@ -122,8 +128,9 @@ class HistoricalDatabaseManager:
                     INSERT INTO defect_points (
                         inspection_id, defect_type, process_code, severity,
                         confidence, dx_normalized, dy_normalized, r_normalized,
-                        theta_degrees, clock_hour, zone_name, area_pct, bbox_json, mask_polygon_json
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                        theta_degrees, clock_hour, zone_name, area_pct, bbox_json, mask_polygon_json,
+                        image_width, image_height
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
                 """, (
                     inspection_id,
                     d.defect_type,
@@ -138,7 +145,9 @@ class HistoricalDatabaseManager:
                     d.zone_name,
                     d.area_pct,
                     json.dumps(d.bbox),
-                    json.dumps(d.mask_polygon) if d.mask_polygon else None
+                    json.dumps(d.mask_polygon) if d.mask_polygon else None,
+                    d.image_width,
+                    d.image_height
                 ))
 
             conn.commit()
@@ -174,7 +183,9 @@ class HistoricalDatabaseManager:
                         zone_name=dr["zone_name"] if "zone_name" in dr.keys() else "Swept Friction Band",
                         area_pct=dr["area_pct"],
                         bbox=json.loads(dr["bbox_json"]) if dr["bbox_json"] else [],
-                        mask_polygon=json.loads(dr["mask_polygon_json"]) if "mask_polygon_json" in dr.keys() and dr["mask_polygon_json"] else None
+                        mask_polygon=json.loads(dr["mask_polygon_json"]) if "mask_polygon_json" in dr.keys() and dr["mask_polygon_json"] else None,
+                        image_width=dr["image_width"] if "image_width" in dr.keys() else None,
+                        image_height=dr["image_height"] if "image_height" in dr.keys() else None
                     )
                     for dr in d_rows
                 ]

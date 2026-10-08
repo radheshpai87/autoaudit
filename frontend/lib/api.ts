@@ -73,6 +73,9 @@ export interface MachineHeatmapBin {
   bbox?: number[];
   mask_polygon?: number[][] | null;
   area_pct?: number;
+  severity?: string;
+  image_width?: number | null;
+  image_height?: number | null;
 }
 
 export interface MachineHeatmapData {
@@ -199,4 +202,47 @@ export async function checkBackendHealth(): Promise<{ isOnline: boolean; mode: s
   } catch {
     return { isOnline: false, mode: "offline" };
   }
+}
+
+export interface WhatsAppDirectoryEntry {
+  name: string;
+  phone: string;
+  station: string;
+}
+
+export interface WhatsAppStatusResponse {
+  isConnected: boolean;
+  qrDataUrl: string | null;
+  directory: Record<string, WhatsAppDirectoryEntry>;
+  senderMatchesExpected?: boolean | null;
+}
+
+export async function fetchWhatsAppStatus(): Promise<WhatsAppStatusResponse> {
+  try {
+    const response = await fetch("/api/whatsapp/status", { cache: "no-store" });
+    if (!response.ok) return { isConnected: false, qrDataUrl: null, directory: {} };
+    return await response.json() as WhatsAppStatusResponse;
+  } catch {
+    return { isConnected: false, qrDataUrl: null, directory: {} };
+  }
+}
+
+export async function dispatchWhatsAppAlert(payload: {
+  phone?: string;
+  stationKey: string;
+  station: string;
+  failureMode: string;
+  rpn?: number;
+  probability?: string;
+  action: string;
+  partId?: string;
+}): Promise<{ success: boolean; error?: string; recipientName?: string; dispatchId?: string }> {
+  const response = await fetch("/api/whatsapp/send-alert", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const body = await response.json() as { success?: boolean; error?: string; recipientName?: string; dispatchId?: string };
+  if (!response.ok) return { success: false, error: body.error ?? `Dispatch failed (${response.status})` };
+  return { success: body.success === true, error: body.error, recipientName: body.recipientName, dispatchId: body.dispatchId };
 }
