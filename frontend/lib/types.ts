@@ -133,3 +133,29 @@ export interface FaultTrend {
 
 export type HumanReview = InspectorReview;
 export type AuditEntry = AuditLog;
+
+export interface InspectionUploadLog {
+  id: string;
+  fileName: string;
+  uploadedAt: string;
+  component: string;
+  result: Disposition;
+  condition: string;
+  conditionConfidence: number;
+  wearIndex: number;
+  defectCount: number;
+  inferenceMode: string;
+  modelName: string;
+  summary: string;
+  detections: Array<{
+    defectType: string;
+    confidence: number;
+    severity: string;
+    bbox: [number, number, number, number];
+    areaPercentage: number;
+    location?: string;
+    explanation?: string;
+    recommendation?: string;
+    maskPolygon?: Array<[number, number]>;
+  }>;
+}
