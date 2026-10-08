@@ -9,8 +9,8 @@ import { getStoredInspectionLogs, saveStoredInspection, saveStoredInspectionLogs
 type ViewName = "AI Inspection Studio" | "Main Dashboard" | "Inspection History" | "Batch Data" | "Fault Intelligence Board" | "Human Review";
 type IconName = "grid" | "disc" | "box" | "chart";
 const navigation: { label: ViewName; icon: IconName }[] = [
-  { label: "AI Inspection Studio", icon: "disc" },
   { label: "Main Dashboard", icon: "grid" },
+  { label: "AI Inspection Studio", icon: "disc" },
   { label: "Inspection History", icon: "box" },
   { label: "Batch Data", icon: "box" },
   { label: "Fault Intelligence Board", icon: "chart" },
