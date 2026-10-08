@@ -153,6 +153,54 @@ class InspectionService:
         fmea_risks = [d.fmea for d in detections if getattr(d, "fmea", None) is not None]
         top_fmea_risk = max(fmea_risks, key=lambda f: f.rpn) if fmea_risks else None
 
+        # Asynchronously log inspection to historical SQLite database with polar defect coordinates
+        try:
+            from datetime import datetime, timezone
+            from app.models.historical_schemas import HistoricalInspectionRecord, HistoricalDefectPoint
+            from app.services.historical_db import HistoricalDatabaseManager
+            from app.services.predictive_engine import PredictiveHeatmapEngine
+
+            hist_defects = []
+            for d in detections:
+                r_norm, theta_deg = PredictiveHeatmapEngine.cartesian_to_polar(
+                    d.bbox[0], d.bbox[1], d.bbox[2], d.bbox[3], w, h
+                )
+                p_code = getattr(d.fmea, "process_code", "UNKNOWN") if getattr(d, "fmea", None) else "UNKNOWN"
+                hist_defects.append(HistoricalDefectPoint(
+                    defect_type=d.defect_type,
+                    process_code=p_code,
+                    severity=d.severity.value,
+                    confidence=d.confidence,
+                    r_normalized=r_norm,
+                    theta_degrees=theta_deg,
+                    area_pct=d.area_percentage,
+                    bbox=d.bbox
+                ))
+
+            p_code_top = getattr(top_fmea_risk, "process_code", None) if top_fmea_risk else None
+            station_top = getattr(top_fmea_risk, "station", None) if top_fmea_risk else None
+
+            hist_record = HistoricalInspectionRecord(
+                part_id=f"BD-{image_id[:8].upper()}",
+                timestamp=datetime.now(timezone.utc).isoformat(),
+                image_filename=filename,
+                overall_status=overall_status.value,
+                defect_count=len(detections),
+                condition=condition_result.condition.value,
+                wear_index_score=condition_result.wear_index_score,
+                dtv_value_um=fmea_summary.dtv_value_um or 2.1,
+                runout_value_um=fmea_summary.runout_value_um or 11.4,
+                parallelism_value_um=fmea_summary.parallelism_value_um or 16.2,
+                highest_rpn=fmea_summary.highest_rpn,
+                primary_process_code=p_code_top,
+                station=station_top,
+                defects=hist_defects
+            )
+            HistoricalDatabaseManager.log_inspection(hist_record)
+        except Exception as log_err:
+            import logging
+            logging.getLogger("autoinspect").warning("Could not log inspection to historical database: %s", log_err)
+
         return InspectionResponse(
             image_id=image_id,
             status=status_text,

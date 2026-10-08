@@ -3,9 +3,11 @@ import type { HealthResponse } from '../types/inspection'
 
 interface HeaderProps {
   health: HealthResponse | null
+  currentView?: 'inspect' | 'analytics'
+  onViewChange?: (view: 'inspect' | 'analytics') => void
 }
 
-export const Header: React.FC<HeaderProps> = ({ health }) => {
+export const Header: React.FC<HeaderProps> = ({ health, currentView = 'inspect', onViewChange }) => {
   return (
     <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -27,8 +29,33 @@ export const Header: React.FC<HeaderProps> = ({ health }) => {
           </div>
         </div>
 
-        {/* System & Model status HUD badge */}
-        <div className="flex items-center gap-3 font-mono text-xs">
+        {/* View mode switcher & status HUD */}
+        <div className="flex flex-wrap items-center gap-3 font-mono text-xs">
+          {onViewChange && (
+            <div className="flex rounded-lg bg-slate-950 p-1 border border-slate-800">
+              <button
+                onClick={() => onViewChange('inspect')}
+                className={`px-3 py-1 rounded transition-colors ${
+                  currentView === 'inspect'
+                    ? 'bg-cyan-950 text-cyan-300 font-bold border border-cyan-700/60'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                HUD Inspection
+              </button>
+              <button
+                onClick={() => onViewChange('analytics')}
+                className={`px-3 py-1 rounded transition-colors ${
+                  currentView === 'analytics'
+                    ? 'bg-cyan-950 text-cyan-300 font-bold border border-cyan-700/60'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Historical & Heatmaps
+              </button>
+            </div>
+          )}
+
           {health ? (
             <>
               <div

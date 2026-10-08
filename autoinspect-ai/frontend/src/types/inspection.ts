@@ -91,3 +91,84 @@ export interface HealthResponse {
   model_loaded: boolean
   weights_path?: string
 }
+
+export interface MachineSignatureWarning {
+  machine_code: string
+  station: string
+  failure_mode: string
+  potential_causes: string
+  confidence: number
+  spatial_signature: string
+  severity_level: 'warning' | 'critical'
+  alert_message: string
+  recommended_action: string
+  evidence_count: number
+  recent_trend_slope: number
+}
+
+export interface HeatmapBin {
+  r_bin: number
+  theta_bin: number
+  intensity: number
+  defect_count: number
+  top_process_code: string
+}
+
+export interface MachineHeatmapData {
+  machine_code: string
+  station: string
+  total_samples: number
+  total_defects: number
+  bins: HeatmapBin[]
+  signature_summary: string
+}
+
+export interface HistoricalInspectionItem {
+  id?: number
+  part_id: string
+  timestamp: string
+  image_filename: string
+  overall_status: string
+  defect_count: number
+  condition: string
+  wear_index_score: number
+  dtv_value_um: number
+  runout_value_um: number
+  parallelism_value_um: number
+  highest_rpn: number
+  primary_process_code?: string | null
+  station?: string | null
+  defects: {
+    defect_type: string
+    process_code: string
+    severity: string
+    confidence: number
+    r_normalized: number
+    theta_degrees: number
+    area_pct: number
+    bbox: number[]
+  }[]
+}
+
+export interface HistoricalAnalyticsResponse {
+  total_inspections: number
+  pass_rate: number
+  reject_rate: number
+  review_rate: number
+  records: HistoricalInspectionItem[]
+  active_early_warnings: MachineSignatureWarning[]
+  machine_heatmaps: Record<string, MachineHeatmapData>
+  time_series: {
+    timestamp: string
+    part_id: string
+    dtv_um: number
+    runout_um: number
+    parallelism_um: number
+    rpn: number
+    status: string
+    defect_count: number
+    process_code: string
+    wear_index: number
+  }[]
+}
+

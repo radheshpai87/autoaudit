@@ -63,3 +63,25 @@ def get_sample_image(sample_name: str):
             return FileResponse(rel_path.replace("backend/", ""), media_type="image/jpeg")
         raise HTTPException(status_code=404, detail="Sample image not found")
     return FileResponse(rel_path, media_type="image/jpeg")
+
+
+@router.get("/analytics")
+def get_historical_analytics(limit: int = 100):
+    """
+    GET /api/analytics
+    Returns aggregated quality analytics, polar defect heatmaps per machine code,
+    and active predictive early warnings for faulty machines.
+    """
+    from app.services.predictive_engine import PredictiveHeatmapEngine
+    return PredictiveHeatmapEngine.generate_analytics_and_heatmaps(limit=limit)
+
+
+@router.get("/history")
+def get_inspection_history(limit: int = 50):
+    """
+    GET /api/history
+    Returns recent historical inspection records with polar coordinates.
+    """
+    from app.services.historical_db import HistoricalDatabaseManager
+    return HistoricalDatabaseManager.get_recent_inspections(limit=limit)
+

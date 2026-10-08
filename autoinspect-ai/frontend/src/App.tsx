@@ -3,20 +3,27 @@ import { Header } from './components/Header'
 import { UploadZone } from './components/UploadZone'
 import { ImageComparisonView } from './components/ImageComparisonView'
 import { InspectionSummary } from './components/InspectionSummary'
-import type { HealthResponse, InspectionResponse } from './types/inspection'
+import { HistoricalAnalyticsView } from './components/HistoricalAnalyticsView'
+import type { HealthResponse, InspectionResponse, HistoricalAnalyticsResponse } from './types/inspection'
 import { Loader2, AlertCircle } from 'lucide-react'
 
 export function App() {
   const [health, setHealth] = useState<HealthResponse | null>(null)
+  const [currentView, setCurrentView] = useState<'inspect' | 'analytics'>('inspect')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [originalImageUrl, setOriginalImageUrl] = useState<string | null>(null)
   const [isInspecting, setIsInspecting] = useState(false)
   const [inspectionResult, setInspectionResult] = useState<InspectionResponse | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  // Fetch backend health on mount
+  // Analytics telemetry state
+  const [analyticsData, setAnalyticsData] = useState<HistoricalAnalyticsResponse | null>(null)
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false)
+
+  // Fetch backend health & analytics on mount
   useEffect(() => {
     fetchHealth()
+    fetchAnalytics()
   }, [])
 
   const fetchHealth = async () => {
@@ -28,6 +35,21 @@ export function App() {
       }
     } catch (err) {
       console.warn('Backend currently unreachable:', err)
+    }
+  }
+
+  const fetchAnalytics = async () => {
+    setIsLoadingAnalytics(true)
+    try {
+      const res = await fetch('/api/analytics?limit=50')
+      if (res.ok) {
+        const data = await res.json()
+        setAnalyticsData(data)
+      }
+    } catch (err) {
+      console.warn('Could not fetch historical analytics:', err)
+    } finally {
+      setIsLoadingAnalytics(false)
     }
   }
 
@@ -108,13 +130,32 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      {/* Industrial Header */}
-      <Header health={health} />
+      {/* Industrial Header with View Mode Toggle */}
+      <Header
+        health={health}
+        currentView={currentView}
+        onViewChange={(v) => {
+          setCurrentView(v)
+          if (v === 'analytics') {
+            fetchAnalytics()
+          }
+        }}
+      />
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-8">
-        {/* Intro Hero Banner (when no inspection active) */}
-        {!inspectionResult && !isInspecting && (
+        {/* VIEW 1: Historical Telemetry & Polar Defect Heatmaps */}
+        {currentView === 'analytics' ? (
+          <HistoricalAnalyticsView
+            analytics={analyticsData}
+            isLoading={isLoadingAnalytics}
+            onRefresh={fetchAnalytics}
+          />
+        ) : (
+          /* VIEW 2: Single Brake Rotor Inspection HUD */
+          <>
+            {/* Intro Hero Banner (when no inspection active) */}
+            {!inspectionResult && !isInspecting && (
           <div className="flex flex-col items-center text-center max-w-3xl mx-auto pt-6 pb-2">
             <span className="text-xs font-mono font-semibold tracking-widest text-cyan-400 uppercase px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-800/80 mb-3">
               Automated Optical Inspection (AOI)
@@ -226,7 +267,9 @@ export function App() {
             />
           </div>
         )}
-      </main>
+      </>
+    )}
+  </main>
 
       {/* Industrial Footer */}
       <footer className="border-t border-slate-800 bg-slate-950 px-6 py-4 text-xs text-slate-500 font-mono flex flex-col sm:flex-row items-center justify-between gap-2">
