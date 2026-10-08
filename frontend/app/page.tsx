@@ -2,15 +2,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AutoAuditView } from "../components/autoaudit/Views";
-import { checkBackendHealth, type InspectApiResponse } from "../lib/api";
+import { checkBackendHealth, fetchHistoricalAnalytics, fetchInspectionHistory, type HistoricalAnalyticsResponse, type HistoricalInspectionRecord, type InspectApiResponse } from "../lib/api";
 import type { InspectionUploadLog } from "../lib/types";
 import { getStoredInspectionLogs, saveStoredInspection, saveStoredInspectionLogs } from "../lib/inspection-store";
 
-type ViewName = "AI Inspection Studio" | "Main Dashboard" | "Inspection History" | "Batch Data" | "Fault Intelligence Board" | "Human Review";
+type ViewName = "AI Inspection Studio" | "Main Dashboard" | "Inspection History" | "Historical Data & Prediction" | "Batch Data" | "Fault Intelligence Board" | "Human Review";
 type IconName = "grid" | "disc" | "box" | "chart";
 const navigation: { label: ViewName; icon: IconName }[] = [
   { label: "Main Dashboard", icon: "grid" },
   { label: "AI Inspection Studio", icon: "disc" },
+  { label: "Historical Data & Prediction", icon: "chart" },
   { label: "Inspection History", icon: "box" },
   { label: "Batch Data", icon: "box" },
   { label: "Fault Intelligence Board", icon: "chart" },
@@ -35,9 +36,32 @@ export default function Home() {
   const [notice, setNotice] = useState("");
   const [backend, setBackend] = useState<{ isOnline: boolean; mode: string } | null>(null);
   const [qualityAlert, setQualityAlert] = useState("");
+  const [historicalAnalytics, setHistoricalAnalytics] = useState<HistoricalAnalyticsResponse | null>(null);
+  const [historicalRecords, setHistoricalRecords] = useState<HistoricalInspectionRecord[]>([]);
+  const [analyticsStatus, setAnalyticsStatus] = useState<"loading" | "refreshing" | "online" | "offline">("loading");
+  const [analyticsError, setAnalyticsError] = useState("");
+
+  const refreshAnalytics = useCallback(async () => {
+    setAnalyticsStatus((current) => current === "online" ? "refreshing" : "loading");
+    const [analyticsResult, historyResult] = await Promise.allSettled([fetchHistoricalAnalytics(), fetchInspectionHistory(100)]);
+    if (analyticsResult.status === "fulfilled") {
+      setHistoricalAnalytics(analyticsResult.value);
+      setAnalyticsStatus("online");
+      if (historyResult.status === "fulfilled") setAnalyticsError("");
+      else {
+        setHistoricalRecords(analyticsResult.value.records);
+        setAnalyticsError(historyResult.reason instanceof Error ? historyResult.reason.message : "History endpoint unavailable; showing the records included in analytics response.");
+      }
+    } else {
+      setAnalyticsStatus("offline");
+      setAnalyticsError(analyticsResult.reason instanceof Error ? analyticsResult.reason.message : "Backend analytics could not be loaded.");
+    }
+    if (historyResult.status === "fulfilled") setHistoricalRecords(historyResult.value);
+  }, []);
 
   useEffect(() => {
     void checkBackendHealth().then(setBackend);
+    void refreshAnalytics();
     const restoreHistory = async () => {
       let logs: InspectionUploadLog[] = [];
       try { logs = await getStoredInspectionLogs(); } catch { /* Migrate history from local storage when IndexedDB is unavailable. */ }
@@ -75,7 +99,7 @@ export default function Home() {
     };
     window.addEventListener("popstate", onPopState);
     return () => { window.clearInterval(timer); window.removeEventListener("popstate", onPopState); };
-  }, []);
+  }, [refreshAnalytics]);
 
   const addLiveInspection = useCallback(async (response: InspectApiResponse, thumbnailDataUrl: string, file: File) => {
     try { await saveStoredInspection(response.image_id, file, response); } catch { setNotice("Inspection completed, but this browser could not save the full image for later reopening."); }
@@ -130,7 +154,8 @@ export default function Home() {
       setQualityAlert(`Inspection ${response.image_id}: ${finding} flagged · disposition ${response.overall_status}. Review the returned findings; no machine cause was identified.`);
       window.setTimeout(() => setQualityAlert(""), 12_000);
     }
-  }, [uploadLogs]);
+    void refreshAnalytics();
+  }, [uploadLogs, refreshAnalytics]);
 
   const selectPart = useCallback((id: string) => {
     setSelectedPart(id);
@@ -157,7 +182,7 @@ export default function Home() {
       <header className="topbar"><div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><b>{active}</b></div><div className="top-actions"><span className="aa-top-demo">{backend?.isOnline ? (backend.mode === "real_ai" ? "REAL YOLO AI" : "BACKEND · MOCK") : "BACKEND OFFLINE"}</span><button className="icon-button notification-button" aria-label="Show data-source details" onClick={() => { setNotice(backend?.isOnline ? `FastAPI backend online · ${backend.mode}` : "Backend offline. Live image inspection is unavailable until reconnection."); window.setTimeout(() => setNotice(""), 4500); }}>ⓘ</button><div className="top-divider"/><div className="top-date"><span className="date-label">{clock ? clock.split(", ").slice(0, 2).join(", ").toUpperCase() : "LOCAL PLANT TIME"}</span><b>{clock ? clock.split(", ").at(-1) : "--:--"} <span>IST</span></b></div></div></header>
       {backend && !backend.isOnline && <div className="aa-backend-warning" role="status"><span>Backend offline on :8000 — live image inspection is unavailable until reconnection</span><button className="button button-secondary small-button" onClick={() => { setBackend(null); void checkBackendHealth().then(setBackend); }}>Retry connection</button></div>}
       {qualityAlert && <div className={`aa-quality-alert ${qualityAlert.startsWith("Unclassified") ? "aa-anomaly-alert" : ""}`} role="alert"><b>{qualityAlert}</b><button aria-label="Dismiss critical defect alert" onClick={() => setQualityAlert("")}>×</button></div>}
-      <div className="page-content"><div className={active === "AI Inspection Studio" ? "" : "aa-persistent-inspector-hidden"}><AutoAuditView view="AI Inspection Studio" uploadLogs={uploadLogs} selectedPart={selectedPart} setSelectedPart={selectPart} navigate={navigate} backendOnline={backend?.isOnline ?? false} inferenceMode={backend?.mode ?? "offline"} onInspectionCreated={addLiveInspection}/></div>{active !== "AI Inspection Studio" && <AutoAuditView view={active} uploadLogs={uploadLogs} selectedPart={selectedPart} setSelectedPart={selectPart} navigate={navigate} backendOnline={backend?.isOnline ?? false} inferenceMode={backend?.mode ?? "offline"} onInspectionCreated={addLiveInspection}/>}<footer className="page-footer"><span>AutoAudit <span>·</span> Manufacturing quality, in focus</span><span>{backend?.isOnline ? "LIVE YOLO INSPECTIONS · BACKEND CONNECTED" : "LIVE UPLOAD METRICS · BACKEND RESULTS ONLY"}</span></footer></div>
+      <div className="page-content"><div className={active === "AI Inspection Studio" ? "" : "aa-persistent-inspector-hidden"}><AutoAuditView view="AI Inspection Studio" uploadLogs={uploadLogs} selectedPart={selectedPart} setSelectedPart={selectPart} navigate={navigate} backendOnline={backend?.isOnline ?? false} inferenceMode={backend?.mode ?? "offline"} onInspectionCreated={addLiveInspection} historicalAnalytics={historicalAnalytics} historicalRecords={historicalRecords} analyticsStatus={analyticsStatus} analyticsError={analyticsError} refreshAnalytics={refreshAnalytics}/></div>{active !== "AI Inspection Studio" && <AutoAuditView view={active} uploadLogs={uploadLogs} selectedPart={selectedPart} setSelectedPart={selectPart} navigate={navigate} backendOnline={backend?.isOnline ?? false} inferenceMode={backend?.mode ?? "offline"} onInspectionCreated={addLiveInspection} historicalAnalytics={historicalAnalytics} historicalRecords={historicalRecords} analyticsStatus={analyticsStatus} analyticsError={analyticsError} refreshAnalytics={refreshAnalytics}/>}<footer className="page-footer"><span>AutoAudit <span>·</span> Manufacturing quality, in focus</span><span>{backend?.isOnline ? "LIVE YOLO INSPECTIONS · BACKEND CONNECTED" : "LIVE UPLOAD METRICS · BACKEND RESULTS ONLY"}</span></footer></div>
     </section>
       {notice && <div className="toast"><span className="toast-check">i</span>{notice}</div>}
     </main>;
