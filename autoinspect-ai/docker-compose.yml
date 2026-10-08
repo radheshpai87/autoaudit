@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/weights:/app/weights
+    environment:
+      - INFERENCE_MODE=auto
+      - YOLO_WEIGHTS_PATH=weights/best.pt
+      - CONFIDENCE_THRESHOLD=0.35
+      - UNKNOWN_ANOMALY_THRESHOLD=0.55
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
