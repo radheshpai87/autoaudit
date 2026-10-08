@@ -1,6 +1,14 @@
 export type Disposition = "PASS" | "REVIEW" | "REJECT";
 export type Severity = "Low" | "Medium" | "High" | "Critical";
-export type DefectClass = "Surface Crack" | "Scratch" | "Pitting" | "Inclusion" | "Casting Defect" | "Unknown Anomaly" | "Chipping / edge damage";
+export type DefectClass = "Surface Crack" | "Scratch" | "Scoring" | "Pitting" | "Inclusion" | "Casting Defect" | "Machining Defect" | "Unknown Anomaly" | "Chipping / edge damage";
+
+export interface BrakeDisc {
+  id: string;
+  batchId: string;
+  model: string;
+  line: string;
+  machineId: string;
+}
 
 export interface DefectDetection {
   id: string;
@@ -22,6 +30,26 @@ export interface InspectorReview {
   reason: string;
 }
 
+export interface EngineeringAssessment {
+  severity: Severity;
+  disposition: Disposition;
+  ruleId: string;
+  ruleDescription: string;
+  defectAreaRatioPercent?: number;
+  lengthPx?: number;
+  criticalBoundaryIntersection?: boolean;
+  provisional: boolean;
+}
+
+export interface MechanicalExplanation {
+  defectClass: DefectClass;
+  whatItIs: string;
+  principle: string;
+  possibleContributors: string[];
+  potentialEffect: string;
+  suggestedAction: string;
+}
+
 export interface Inspection {
   id: string;
   batchId: string;
@@ -34,6 +62,9 @@ export interface Inspection {
   status: Disposition;
   confidence: number;
   detections: DefectDetection[];
+  station?: string;
+  mechanicalExplanation?: MechanicalExplanation;
+  assessment?: EngineeringAssessment;
   review?: InspectorReview;
 }
 
@@ -61,6 +92,7 @@ export interface ProcessTelemetry {
   pressureBar: number;
   vibrationMmS: number;
   cycleSeconds: number;
+  rpm: number;
 }
 
 export interface Machine {
@@ -81,3 +113,23 @@ export interface AuditLog {
   timestamp: string;
   details: string;
 }
+
+export interface QualityAlert {
+  id: string;
+  severity: "Info" | "Monitor" | "Warning";
+  title: string;
+  detail: string;
+  batchId?: string;
+  machineId?: string;
+}
+
+export interface FaultTrend {
+  defectClass: DefectClass;
+  countsByBatch: Array<{ batchId: string; count: number; ratePercent: number; inspected: number }>;
+  direction: "Stable" | "Monitor" | "Increasing" | "Investigation Recommended";
+  changePercentPoints: number;
+  machineId?: string;
+}
+
+export type HumanReview = InspectorReview;
+export type AuditEntry = AuditLog;

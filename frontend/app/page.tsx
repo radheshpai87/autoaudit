@@ -6,13 +6,13 @@ import { seedInspections } from "../lib/mock-data";
 import { autoAuditApi } from "../lib/api";
 import type { AuditLog, InspectorReview, Inspection } from "../lib/types";
 
-type ViewName = "Plant Overview" | "Component Inspector" | "Batch Analytics" | "Machine Intelligence" | "Human Review";
+type ViewName = "Plant Overview" | "AI Inspection Studio" | "Batch Quality Analytics" | "Fault Intelligence Board" | "Human Review";
 type IconName = "grid" | "disc" | "box" | "chart" | "activity";
 const navigation: { label: ViewName; icon: IconName }[] = [
   { label: "Plant Overview", icon: "grid" },
-  { label: "Component Inspector", icon: "disc" },
-  { label: "Batch Analytics", icon: "box" },
-  { label: "Machine Intelligence", icon: "chart" },
+  { label: "AI Inspection Studio", icon: "disc" },
+  { label: "Batch Quality Analytics", icon: "box" },
+  { label: "Fault Intelligence Board", icon: "chart" },
   { label: "Human Review", icon: "activity" },
 ];
 
@@ -39,7 +39,7 @@ export default function Home() {
       void autoAuditApi.listInspections().then(setInspections).catch(() => setNotice("Backend provider is selected but /api/inspections is not available."));
     }
     try {
-      const saved = window.localStorage.getItem("autoaudit-inspections-v1");
+      const saved = window.localStorage.getItem("autoaudit-inspections-v2");
       if (saved) setInspections(JSON.parse(saved) as Inspection[]);
     } catch { /* Keep the bundled demo fixtures if local storage is unavailable. */ }
     const url = new URL(window.location.href);
@@ -67,16 +67,16 @@ export default function Home() {
   const navigate = useCallback((view: ViewName, partId?: string) => {
     setActive(view);
     if (partId) setSelectedPart(partId);
-    const url = new URL(window.location.href); url.searchParams.set("view", view); if (partId) url.searchParams.set("part", partId); else if (view !== "Component Inspector") url.searchParams.delete("part");
+    const url = new URL(window.location.href); url.searchParams.set("view", view); if (partId) url.searchParams.set("part", partId); else if (view !== "AI Inspection Studio") url.searchParams.delete("part");
     window.history.pushState({}, "", url);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
   const saveReview = useCallback((id: string, review: InspectorReview) => {
     const updated = inspections.map((row) => row.id === id ? { ...row, review, status: review.finalDisposition } : row);
     setInspections(updated);
-    try { window.localStorage.setItem("autoaudit-inspections-v1", JSON.stringify(updated)); } catch { /* Current-session state remains updated. */ }
+    try { window.localStorage.setItem("autoaudit-inspections-v2", JSON.stringify(updated)); } catch { /* Current-session state remains updated. */ }
     const log: AuditLog = { id: crypto.randomUUID(), partId: id, action: "Human review saved", actor: review.reviewer, timestamp: review.timestamp, details: `${review.originalClass} / ${review.originalDisposition} → ${review.finalClass} / ${review.finalDisposition}; reason: ${review.reason}` };
-    try { const oldLog = JSON.parse(window.localStorage.getItem("autoaudit-audit-log-v1") ?? "[]") as AuditLog[]; window.localStorage.setItem("autoaudit-audit-log-v1", JSON.stringify([log, ...oldLog].slice(0, 100))); } catch { /* Audit detail stays represented in the persisted review record. */ }
+    try { const oldLog = JSON.parse(window.localStorage.getItem("autoaudit-audit-log-v2") ?? "[]") as AuditLog[]; window.localStorage.setItem("autoaudit-audit-log-v2", JSON.stringify([log, ...oldLog].slice(0, 100))); } catch { /* Audit detail stays represented in the persisted review record. */ }
     void autoAuditApi.saveReview(id, review).catch(() => setNotice("Review saved locally; backend persistence is not available."));
   }, [inspections]);
 
@@ -89,7 +89,7 @@ export default function Home() {
       <div className="sidebar-bottom"><div className="support-card"><div className="support-icon"><Icon name="activity" size={17}/></div><div><strong>Demo workspace</strong><span>Mock provider connected</span></div><span className="online-dot"/></div><div className="user-card"><div className="avatar">AR</div><div className="user-meta"><b>Alex Rivera</b><span>Quality manager</span></div><span className="user-role">DEMO</span></div></div>
     </aside>
     <section className="content-area">
-      <header className="topbar"><div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><b>{active}</b></div><div className="top-actions"><span className="aa-top-demo">DEMO DATA</span><button className="icon-button notification-button" aria-label="Show data-source details" onClick={() => { setNotice("Demo fixtures are active. No backend or YOLO model is connected."); window.setTimeout(() => setNotice(""), 4500); }}>ⓘ</button><div className="top-divider"/><div className="top-date"><span className="date-label">{clock ? clock.split(", ").slice(0, 2).join(", ").toUpperCase() : "LOCAL PLANT TIME"}</span><b>{clock ? clock.split(", ").at(-1) : "--:--"} <span>IST</span></b></div></div></header>
+      <header className="topbar"><div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><b>{active}</b></div><div className="top-actions"><span className="aa-top-demo">DEMO DATA</span><button className="button button-secondary small-button" onClick={() => { if (window.confirm("Reset local demo reviews and audit history?")) { setInspections(seedInspections); window.localStorage.removeItem("autoaudit-inspections-v2"); window.localStorage.removeItem("autoaudit-audit-log-v2"); setNotice("Local demo reviews and audit history reset."); window.setTimeout(() => setNotice(""), 4500); } }}>Reset demo</button><button className="icon-button notification-button" aria-label="Show data-source details" onClick={() => { setNotice("Demo fixtures are active. No backend or YOLO model is connected."); window.setTimeout(() => setNotice(""), 4500); }}>ⓘ</button><div className="top-divider"/><div className="top-date"><span className="date-label">{clock ? clock.split(", ").slice(0, 2).join(", ").toUpperCase() : "LOCAL PLANT TIME"}</span><b>{clock ? clock.split(", ").at(-1) : "--:--"} <span>IST</span></b></div></div></header>
       <div className="page-content"><AutoAuditView view={active} inspections={inspections} selectedPart={selectedPart} setSelectedPart={selectPart} navigate={navigate} saveReview={saveReview}/><footer className="page-footer"><span>AutoAudit <span>·</span> Manufacturing quality, in focus</span><span>DEMONSTRATION DATA · NOT FOR PRODUCTION DISPOSITION</span></footer></div>
     </section>
     {notice && <div className="toast"><span className="toast-check">i</span>{notice}</div>}
