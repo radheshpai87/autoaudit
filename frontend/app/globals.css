@@ -347,3 +347,206 @@ td{font-size:11px}
 .aa-upload-log-metrics b{font-size:13px}
 .aa-upload-log-detection>summary{font-size:14px}
 @media(max-width:700px){.aa-upload-hero{align-items:center}.aa-upload-hero .aa-primary-upload-actions{margin:0}.aa-manager-card-head{align-items:flex-start;flex-direction:column}.aa-manager-card-head>.aa-badge{max-width:100%}.aa-anomaly-banner{align-items:flex-start;flex-direction:column}.aa-inspector-actions{justify-content:flex-start}}
+
+/* AI Inspection Studio: large type, high contrast, and clearer card hierarchy. */
+.aa-inspector-dark{font-size:17px}
+.aa-inspector-dark .aa-page-heading{align-items:center;gap:22px;margin-bottom:28px}
+.aa-inspector-dark .aa-page-heading h1{font-size:34px;line-height:1.15;letter-spacing:-.6px}
+.aa-inspector-dark .aa-page-heading p{font-size:16px;line-height:1.5;color:#53647a}
+.aa-inspector-dark .eyebrow{font-size:13px;letter-spacing:1px;color:#596b81}
+.aa-inspector-dark .aa-page-actions{gap:12px}
+.aa-inspector-dark .aa-page-actions .button,.aa-inspector-dark .aa-page-actions .aa-badge{font-size:14px;min-height:42px;padding:8px 13px}
+.aa-inspector-dark .aa-part-select{font-size:14px;min-height:42px;padding:0 12px;color:#53647a}
+.aa-inspector-dark .aa-part-select select{font-size:14px;max-width:260px;color:#26354a}
+.aa-inspector-dark .aa-upload-hero{min-height:250px;gap:17px;padding:34px;border-width:2px;background:linear-gradient(135deg,#f4f9ff,#fff 70%)}
+.aa-inspector-dark .aa-upload-hero .aa-primary-upload-icon{width:68px;height:68px;flex-basis:68px;font-size:38px}
+.aa-inspector-dark .aa-upload-hero .aa-primary-upload-copy>b{font-size:25px;line-height:1.3;color:#20324a}
+.aa-inspector-dark .aa-upload-hero .aa-primary-upload-copy>span{font-size:16px;line-height:1.55;color:#53647a}
+.aa-inspector-dark .aa-upload-hero .aa-primary-upload-copy>small{font-size:14px;color:#596b81}
+.aa-inspector-dark .aa-upload-hero .aa-primary-upload-button{min-height:52px;min-width:180px;font-size:16px}
+.aa-inspector-dark .aa-inspector-image{padding:20px!important;border-radius:12px}
+.aa-inspector-dark .aa-inspector-image>.panel-heading{margin-bottom:16px;padding-bottom:13px}
+.aa-inspector-dark .aa-inspector-image .panel-heading h2{font-size:22px;line-height:1.25}
+.aa-inspector-dark .aa-inspector-image .panel-heading p{font-size:15px;color:#596b81}
+.aa-inspector-dark .aa-live-comparison{gap:14px}
+.aa-inspector-dark .aa-compare-card{padding:14px;border-radius:10px;background:#f7f9fc}
+.aa-inspector-dark .aa-compare-head{font-size:16px;font-weight:800;letter-spacing:.35px;color:#126b79}
+.aa-inspector-dark .aa-compare-head span{font-size:14px;color:#52637a}
+.aa-inspector-dark .aa-live-stage{height:clamp(340px,39vw,560px);border-radius:8px;background:#eef2f6}
+.aa-inspector-dark .aa-live-controls{padding:13px 15px;gap:22px;font-size:15px;color:#34445a}
+.aa-inspector-dark .aa-live-controls label{gap:9px}
+.aa-inspector-dark .aa-live-controls input{width:18px;height:18px}
+.aa-inspector-dark .aa-live-results{border-radius:10px}
+.aa-inspector-dark .aa-live-results-head{padding:15px 17px;font-size:18px;font-weight:800;color:#26354a;background:#f1f5f9}
+.aa-inspector-dark .aa-live-results-head span{font-size:14px;color:#52637a}
+.aa-inspector-dark .aa-live-detection{padding:15px 18px;gap:13px;min-height:68px;color:#26354a}
+.aa-inspector-dark .aa-live-number{width:34px;height:34px;flex-basis:34px;font-size:16px}
+.aa-inspector-dark .aa-live-detection-main{gap:5px}
+.aa-inspector-dark .aa-live-detection-main>b,.aa-inspector-dark .aa-live-detection-main b{font-size:17px;color:#26354a}
+.aa-inspector-dark .aa-live-detection-main small{font-size:14px;line-height:1.5;color:#52637a}
+.aa-inspector-dark .aa-manager-cards{gap:16px;margin-top:20px}
+.aa-inspector-dark .aa-manager-card{padding:22px!important;border-radius:12px}
+.aa-inspector-dark .aa-manager-card-head{font-size:21px;line-height:1.35;padding-bottom:16px;gap:16px}
+.aa-inspector-dark .aa-manager-card-head>.aa-badge{font-size:15px;min-height:38px;padding:9px 13px}
+.aa-inspector-dark .aa-manager-verdict .aa-manager-card-head>.aa-badge{font-size:19px}
+.aa-inspector-dark .aa-manager-highlights{gap:13px;padding:17px 0}
+.aa-inspector-dark .aa-manager-highlights>div{gap:7px;padding:15px;border-radius:9px}
+.aa-inspector-dark .aa-manager-highlights small{font-size:13px;letter-spacing:.45px;color:#52637a}
+.aa-inspector-dark .aa-manager-highlights b{font-size:18px;line-height:1.45;color:#20324a}
+.aa-inspector-dark .aa-manager-details>summary{padding:15px 17px;font-size:16px;color:#205f7a}
+.aa-inspector-dark .aa-technical-details{gap:12px;padding:17px}
+.aa-inspector-dark .aa-technical-details>div{gap:7px;padding:13px;border-radius:8px}
+.aa-inspector-dark .aa-technical-details small{font-size:13px;color:#52637a}
+.aa-inspector-dark .aa-technical-details b,.aa-inspector-dark .aa-technical-details span{font-size:15px;line-height:1.55;color:#34445a}
+.aa-inspector-dark .aa-anomaly-banner{padding:18px;border-radius:10px}
+.aa-inspector-dark .aa-anomaly-banner>b{font-size:18px;line-height:1.5}
+.aa-inspector-dark .aa-anomaly-banner .button{font-size:15px;min-height:44px}
+.aa-inspector-dark .aa-inspection-message{font-size:15px;line-height:1.5;color:#34445a}
+.aa-inspector-dark .aa-replace-upload{font-size:15px;min-height:44px}
+.aa-inspector-dark .aa-upload-log{gap:12px;padding:20px;border-radius:12px}
+.aa-inspector-dark .aa-upload-log .panel-heading h2{font-size:21px}
+.aa-inspector-dark .aa-upload-log .panel-heading p{font-size:14px;color:#596b81}
+.aa-inspector-dark .aa-upload-log th{font-size:12px;letter-spacing:.45px;padding-top:12px;padding-bottom:12px}
+.aa-inspector-dark .aa-upload-log td{font-size:14px;line-height:1.45;padding-top:10px;padding-bottom:10px}
+.aa-inspector-dark .aa-upload-log td .aa-badge,.aa-inspector-dark .aa-upload-log td .button{font-size:13px;min-height:36px}
+.aa-inspector-dark .aa-history-subline{font-size:14px;line-height:1.45;color:#52637a}
+.aa-inspector-dark .aa-viewer-toolbar{height:50px;gap:10px;font-size:14px;color:#44566d}
+.aa-inspector-dark .aa-viewer-toolbar button{height:36px;min-width:36px;font-size:16px}
+.aa-inspector-dark .aa-viewer-toolbar button:nth-of-type(3){font-size:14px;padding:0 12px}
+.aa-inspector-dark .aa-scanning-overlay{font-size:18px}
+@media(max-width:760px){
+  .aa-inspector-dark .aa-page-heading{align-items:flex-start;flex-direction:column}
+  .aa-inspector-dark .aa-page-heading h1{font-size:30px}
+  .aa-inspector-dark .aa-upload-hero{min-height:220px;padding:24px}
+  .aa-inspector-dark .aa-upload-hero .aa-primary-upload-copy>b{font-size:22px}
+  .aa-inspector-dark .aa-live-stage{height:clamp(300px,80vw,470px)}
+  .aa-inspector-dark .aa-manager-card-head{font-size:19px}
+  .aa-inspector-dark .aa-manager-highlights{grid-template-columns:1fr 1fr}
+}
+@media(max-width:520px){
+  .aa-inspector-dark .aa-page-heading h1{font-size:27px}
+  .aa-inspector-dark .aa-live-stage{height:clamp(260px,78vw,380px)}
+  .aa-inspector-dark .aa-manager-highlights{grid-template-columns:1fr}
+  .aa-inspector-dark .aa-technical-details{grid-template-columns:1fr}
+  .aa-inspector-dark .aa-upload-hero .aa-primary-upload-copy>b{font-size:19px}
+}
+
+/* Make the contents of every inspection box readable, not just its heading. */
+.aa-inspector-dark .aa-manager-card-head>span{font-size:22px;line-height:1.4}
+.aa-inspector-dark .aa-manager-highlights>div{min-height:112px;border-color:#d9e2ec;background:#f5f8fc}
+.aa-inspector-dark .aa-manager-highlights small{font-size:15px;line-height:1.4;font-weight:700;color:#43566f}
+.aa-inspector-dark .aa-manager-highlights b{font-size:20px;line-height:1.5;color:#1f3047}
+.aa-inspector-dark .aa-technical-details>div{min-height:88px;border-color:#d9e2ec;background:#f5f8fc}
+.aa-inspector-dark .aa-technical-details small{font-size:15px;line-height:1.4;font-weight:700;color:#43566f}
+.aa-inspector-dark .aa-technical-details b,.aa-inspector-dark .aa-technical-details span{font-size:17px;line-height:1.55;color:#26384f}
+.aa-inspector-dark .aa-manager-details>summary{font-size:18px;line-height:1.5;padding:18px 20px}
+.aa-inspector-dark .aa-manager-details[open]>summary{background:#eef7fc;color:#124e6c}
+.aa-inspector-dark .aa-manager-details>div{background:#f8fafc}
+.aa-inspector-dark .aa-live-detection-main>b,.aa-inspector-dark .aa-live-detection-main b{font-size:19px;line-height:1.4}
+.aa-inspector-dark .aa-live-detection-main small{font-size:16px;line-height:1.55}
+.aa-inspector-dark .aa-live-results-head b{font-size:20px}
+.aa-inspector-dark .aa-live-results-head span{font-size:15px}
+.aa-inspector-dark .aa-live-controls label{font-size:16px;line-height:1.5}
+.aa-inspector-dark .aa-upload-log .panel-heading h2{font-size:23px}
+.aa-inspector-dark .aa-upload-log .panel-heading p{font-size:16px;line-height:1.5}
+.aa-inspector-dark .aa-upload-log th{font-size:14px;line-height:1.4}
+.aa-inspector-dark .aa-upload-log td{font-size:16px;line-height:1.55}
+.aa-inspector-dark .aa-upload-log td .aa-history-subline{font-size:15px}
+.aa-inspector-dark .aa-upload-log td .aa-badge,.aa-inspector-dark .aa-upload-log td .button{font-size:15px;min-height:42px;padding:8px 12px}
+.aa-inspector-dark .aa-inspector-image .panel-heading h2{font-size:24px}
+.aa-inspector-dark .aa-inspector-image .panel-heading p{font-size:16px}
+.aa-inspector-dark .aa-viewer-toolbar,.aa-inspector-dark .aa-viewer-toolbar button:nth-of-type(3){font-size:16px}
+.aa-inspector-dark .aa-manager-empty h2{font-size:25px}
+.aa-inspector-dark .aa-manager-empty p,.aa-inspector-dark .aa-manager-empty small,.aa-inspector-dark .aa-manager-empty span{font-size:17px;line-height:1.65;color:#4a5d75}
+.aa-inspector-dark .aa-upload-hero .aa-primary-upload-copy>b{font-size:27px}
+.aa-inspector-dark .aa-upload-hero .aa-primary-upload-copy>span{font-size:18px;line-height:1.6}
+.aa-inspector-dark .aa-upload-hero .aa-primary-upload-button{font-size:18px;min-height:58px}
+.aa-inspector-dark .aa-manager-card{border-left:4px solid #c8e1ed!important;box-shadow:0 3px 14px #20334d12!important;transition:border-color .15s ease,box-shadow .15s ease}
+.aa-inspector-dark .aa-manager-card:hover{border-left-color:#19899a!important;box-shadow:0 6px 20px #20334d17!important}
+.aa-inspector-dark .aa-manager-details>summary:focus-visible,.aa-inspector-dark .aa-live-detection:focus-visible,.aa-inspector-dark .aa-upload-log button:focus-visible{outline:3px solid #16899b;outline-offset:3px;position:relative;z-index:1}
+.aa-inspector-dark .aa-live-detection:hover,.aa-inspector-dark .aa-live-detection.active{background:#eaf6fb;border-color:#94c9d8}
+.aa-inspector-dark .aa-upload-log tbody tr:hover{background:#f2f8fc}
+
+/* Consistent page titles, readable expanded panels, and comfortable inspection logs. */
+.aa-page-heading{align-items:center;gap:24px;margin-bottom:30px}
+.aa-page-heading h1,.page-heading h1{font-size:36px;line-height:1.15;letter-spacing:-.5px}
+.aa-page-heading p,.page-heading p{font-size:16px;line-height:1.55;color:#52637a}
+.aa-page-heading .eyebrow{font-size:13px;letter-spacing:1px}
+.panel-heading h2{font-size:20px;line-height:1.3}
+.panel-heading p{font-size:14px;line-height:1.5}
+.aa-manager-details{border-radius:10px}
+.aa-manager-details>summary{font-size:19px;line-height:1.5;padding:18px 20px}
+.aa-manager-details>summary:hover{background:#f1f8fc;color:#124e6c}
+.aa-manager-details>div{padding:4px}
+.aa-technical-details{gap:14px;padding:18px}
+.aa-technical-details>div{min-height:94px;gap:8px;padding:14px;border-radius:9px;background:#f5f8fc}
+.aa-technical-details small{font-size:15px;line-height:1.4;font-weight:700;color:#43566f}
+.aa-technical-details b,.aa-technical-details span{font-size:17px;line-height:1.6;color:#26384f}
+.aa-upload-log{gap:14px;padding:20px}
+.aa-upload-log .panel-heading h2{font-size:24px;line-height:1.3}
+.aa-upload-log .panel-heading p{font-size:16px;line-height:1.5}
+.aa-upload-log th{font-size:14px;line-height:1.45;padding-top:14px;padding-bottom:14px}
+.aa-upload-log td{font-size:16px;line-height:1.55;padding-top:13px;padding-bottom:13px}
+.aa-upload-log td>b{font-size:16px;line-height:1.45}
+.aa-upload-log .aa-history-subline{font-size:15px;line-height:1.5;color:#52637a}
+.aa-upload-log td .aa-badge,.aa-upload-log td .button{font-size:14px;min-height:42px;padding:8px 12px}
+.aa-upload-log-empty b{font-size:19px}
+.aa-upload-log-empty span{font-size:16px;line-height:1.55;color:#52637a}
+.aa-upload-log tbody tr{transition:background-color .15s ease}
+.aa-upload-log tbody tr:hover{background:#f2f8fc}
+.aa-upload-log button:focus-visible,.aa-upload-log-entry>summary:focus-visible,.aa-manager-details>summary:focus-visible{outline:3px solid #16899b;outline-offset:3px;position:relative;z-index:1}
+@media(max-width:760px){
+  .aa-page-heading h1,.page-heading h1{font-size:31px}
+  .aa-page-heading p,.page-heading p{font-size:15px}
+  .aa-technical-details b,.aa-technical-details span{font-size:16px}
+  .aa-upload-log td{font-size:15px}
+}
+@media(max-width:520px){
+  .aa-page-heading h1,.page-heading h1{font-size:28px}
+  .aa-page-heading{margin-bottom:22px}
+  .panel-heading h2{font-size:18px}
+  .aa-manager-details>summary{font-size:17px;padding:15px}
+  .aa-technical-details{grid-template-columns:1fr}
+  .aa-upload-log{padding:14px}
+  .aa-upload-log .panel-heading h2{font-size:21px}
+}
+
+/* Keep the inspector actions and long saved filenames from colliding. */
+.aa-inspector-dark .aa-page-heading{display:grid;grid-template-columns:minmax(0,1fr);align-items:start}
+.aa-inspector-dark .aa-page-heading>div:first-child{min-width:0}
+.aa-inspector-dark .aa-page-actions{width:100%;max-width:100%;justify-content:flex-start}
+.aa-inspector-dark .aa-inspector-actions{width:100%;min-width:0;display:flex;align-items:flex-end;justify-content:flex-start;gap:12px;flex-wrap:wrap}
+.aa-inspector-dark .aa-part-select{display:grid;grid-template-columns:minmax(0,1fr);gap:5px;flex:1 1 300px;width:min(100%,480px);min-width:220px;max-width:480px;height:auto;min-height:64px;align-content:center;padding:8px 12px;color:#43566c}
+.aa-inspector-dark .aa-part-select>span{font-size:13px;font-weight:700;line-height:1.2;color:#52637a}
+.aa-inspector-dark .aa-part-select select{display:block;width:100%;min-width:0;max-width:100%;height:32px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.aa-inspector-dark .aa-inspector-actions>.button{flex:0 0 auto;min-height:48px;white-space:nowrap;font-size:15px}
+.aa-inspector-dark .aa-inspector-actions>.aa-badge{flex:0 0 auto;min-height:40px;font-size:14px}
+.aa-inspector-dark .aa-upload-hero{min-height:176px;gap:11px;padding:20px 24px;border-width:1px}
+.aa-inspector-dark .aa-upload-hero .aa-primary-upload-icon{width:48px;height:48px;flex-basis:48px;font-size:27px}
+.aa-inspector-dark .aa-upload-hero .aa-primary-upload-copy{gap:5px}
+.aa-inspector-dark .aa-upload-hero .aa-primary-upload-copy>b{font-size:22px;line-height:1.25}
+.aa-inspector-dark .aa-upload-hero .aa-primary-upload-copy>span{font-size:14px;line-height:1.45}
+.aa-inspector-dark .aa-upload-hero .aa-primary-upload-button{min-height:44px;min-width:150px;font-size:15px}
+.aa-upload-feedback{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:10px 0 14px;padding:13px 16px;border:1px solid #efc9c5;border-left:4px solid #c8564b;border-radius:8px;background:#fff7f5;color:#783b36}
+.aa-upload-feedback>span{font-size:15px;line-height:1.5}
+.aa-upload-feedback .button{flex:0 0 auto;min-height:42px;font-size:14px}
+@media(max-width:760px){
+  .aa-inspector-dark .aa-inspector-actions{display:grid;grid-template-columns:minmax(0,1fr);align-items:stretch}
+  .aa-inspector-dark .aa-part-select{width:100%;min-width:0;max-width:none}
+  .aa-inspector-dark .aa-inspector-actions>.button,.aa-inspector-dark .aa-inspector-actions>.aa-badge{justify-self:start}
+  .aa-inspector-dark .aa-upload-hero{min-height:160px;padding:18px}
+  .aa-inspector-dark .aa-upload-hero .aa-primary-upload-copy>b{font-size:20px}
+  .aa-upload-feedback{align-items:flex-start;flex-direction:column}
+}
+@media(max-width:520px){
+  .aa-inspector-dark .aa-upload-hero{min-height:150px;padding:16px}
+  .aa-inspector-dark .aa-upload-hero .aa-primary-upload-icon{width:42px;height:42px;flex-basis:42px}
+  .aa-inspector-dark .aa-upload-hero .aa-primary-upload-copy>b{font-size:18px}
+  .aa-inspector-dark .aa-upload-hero .aa-primary-upload-copy>span{font-size:13px}
+}
+@media(max-width:760px){
+  .aa-inspector-dark .aa-manager-card-head>span{font-size:19px}
+  .aa-inspector-dark .aa-manager-highlights b{font-size:18px}
+  .aa-inspector-dark .aa-technical-details b,.aa-inspector-dark .aa-technical-details span{font-size:16px}
+  .aa-inspector-dark .aa-upload-log td{font-size:15px}
+}
