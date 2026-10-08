@@ -15,8 +15,7 @@ from app.models.schemas import (
 )
 from app.services.severity_engine import SeverityEngine
 from app.inference.manager import ModelManager
-from app.inference.mock_model import MockDefectModel
-from app.utils.visualizer import draw_inspection_overlay, encode_image_to_base64
+from app.utils.visualizer import draw_inspection_overlay, encode_image_to_base64, generate_defect_heatmap_overlay
 
 
 class InspectionService:
@@ -125,6 +124,10 @@ class InspectionService:
         mask_only_bgr = draw_inspection_overlay(image_bgr, detections, draw_masks=True, draw_boxes=False)
         mask_only_b64 = encode_image_to_base64(mask_only_bgr, ext=ext)
 
+        # Dynamic defect intensity / thermal heatmap overlay from predicted crack boundaries
+        heatmap_bgr = generate_defect_heatmap_overlay(image_bgr, detections)
+        heatmap_b64 = encode_image_to_base64(heatmap_bgr, ext=ext)
+
         # Run trained 3-class classifier: GOOD vs ALMOST_WORN vs FAULTY
         from app.services.classifier_service import BrakeConditionClassifierService
         from app.models.schemas import AnomalyOrigin
@@ -166,6 +169,20 @@ class InspectionService:
                     d.bbox, w, h
                 )
                 p_code = getattr(d.fmea, "process_code", "UNKNOWN") if getattr(d, "fmea", None) else "UNKNOWN"
+                norm_poly = None
+                if d.mask_polygon and len(d.mask_polygon) >= 3:
+                    norm_poly = [
+                        [round((pt[0] / float(max(w, 1))) - 0.5, 4), round((pt[1] / float(max(h, 1))) - 0.5, 4)]
+                        for pt in d.mask_polygon
+                    ]
+
+                norm_bbox = [
+                    round((d.bbox[0] / float(max(w, 1))) - 0.5, 4),
+                    round((d.bbox[1] / float(max(h, 1))) - 0.5, 4),
+                    round((d.bbox[2] / float(max(w, 1))) - 0.5, 4),
+                    round((d.bbox[3] / float(max(h, 1))) - 0.5, 4),
+                ]
+
                 hist_defects.append(HistoricalDefectPoint(
                     defect_type=d.defect_type,
                     process_code=p_code,
@@ -178,7 +195,8 @@ class InspectionService:
                     clock_hour=clock_h,
                     zone_name=zone,
                     area_pct=d.area_percentage,
-                    bbox=d.bbox
+                    bbox=norm_bbox,
+                    mask_polygon=norm_poly
                 ))
 
             p_code_top = getattr(top_fmea_risk, "process_code", None) if top_fmea_risk else None
@@ -222,5 +240,6 @@ class InspectionService:
             image_height=h,
             annotated_image_base64=annotated_b64,
             mask_overlay_base64=mask_only_b64,
+            heatmap_overlay_base64=heatmap_b64,
             brake_component_type="Ventilated Brake Disc Rotor",
         )

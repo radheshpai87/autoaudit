@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Eye, ZoomIn } from 'lucide-react'
+import { Eye, ZoomIn, Flame } from 'lucide-react'
 import type { InspectionResponse } from '../types/inspection'
 
 interface ImageComparisonViewProps {
@@ -7,7 +7,7 @@ interface ImageComparisonViewProps {
   inspectionResult: InspectionResponse
 }
 
-type ViewMode = 'comparison' | 'original' | 'detection' | 'mask_only'
+type ViewMode = 'comparison' | 'detection' | 'heatmap' | 'mask_only' | 'original'
 
 export const ImageComparisonView: React.FC<ImageComparisonViewProps> = ({
   originalUrl,
@@ -18,7 +18,9 @@ export const ImageComparisonView: React.FC<ImageComparisonViewProps> = ({
   const [zoomAnalyzed, setZoomAnalyzed] = useState(false)
 
   const analyzedUrl =
-    viewMode === 'mask_only' && inspectionResult.mask_overlay_base64
+    viewMode === 'heatmap' && inspectionResult.heatmap_overlay_base64
+      ? inspectionResult.heatmap_overlay_base64
+      : viewMode === 'mask_only' && inspectionResult.mask_overlay_base64
       ? inspectionResult.mask_overlay_base64
       : inspectionResult.annotated_image_base64 || originalUrl
 
@@ -51,6 +53,17 @@ export const ImageComparisonView: React.FC<ImageComparisonViewProps> = ({
             }`}
           >
             AI Inspection (HUD)
+          </button>
+          <button
+            onClick={() => setViewMode('heatmap')}
+            className={`px-3 py-1 rounded transition-colors flex items-center gap-1.5 ${
+              viewMode === 'heatmap'
+                ? 'bg-orange-600 text-white font-medium shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <Flame className="w-3.5 h-3.5" />
+            Defect Heatmap
           </button>
           <button
             onClick={() => setViewMode('mask_only')}

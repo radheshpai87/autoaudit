@@ -80,6 +80,7 @@ export interface InspectionResponse {
   image_height: number
   annotated_image_base64?: string
   mask_overlay_base64?: string
+  heatmap_overlay_base64?: string
   brake_component_type?: string
 }
 
@@ -116,6 +117,9 @@ export interface HeatmapBin {
   defect_count: number
   top_process_code: string
   defect_type: string
+  bbox?: number[]
+  mask_polygon?: number[][]
+  area_pct?: number
 }
 
 export interface MachineHeatmapData {

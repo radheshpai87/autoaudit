@@ -194,7 +194,10 @@ class PredictiveHeatmapEngine:
                     intensity=round(d.confidence, 2),
                     defect_count=1,
                     top_process_code=code,
-                    defect_type=d.defect_type
+                    defect_type=d.defect_type,
+                    bbox=d.bbox,
+                    mask_polygon=d.mask_polygon,
+                    area_pct=d.area_pct,
                 ))
 
             machine_heatmaps[code] = MachineHeatmapData(

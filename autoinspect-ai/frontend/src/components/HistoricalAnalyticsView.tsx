@@ -62,6 +62,75 @@ export const HistoricalAnalyticsView: React.FC<HistoricalAnalyticsViewProps> = (
     return { x, y }
   }
 
+  // Renders dynamic defect heatmap with predicted crack contours, thermal bloom, or bounding box
+  const renderDefectElement = (item: {
+    dx_normalized?: number
+    dy_normalized?: number
+    dx?: number
+    dy?: number
+    clock_hour?: number
+    mask_polygon?: number[][] | null
+    bbox?: number[]
+  }, idx: number) => {
+    const dx = item.dx_normalized ?? item.dx ?? 0
+    const dy = item.dy_normalized ?? item.dy ?? 0
+    const { x, y } = cartesianToSvg(dx, dy)
+
+    if (item.mask_polygon && item.mask_polygon.length >= 3) {
+      const polyPts = item.mask_polygon
+        .map(([px, py]) => {
+          const { x: sx, y: sy } = cartesianToSvg(px, py)
+          return `${sx.toFixed(1)},${sy.toFixed(1)}`
+        })
+        .join(' ')
+
+      return (
+        <g key={idx}>
+          {/* Thermal heat dissipation bloom */}
+          <polygon points={polyPts} fill="#ef4444" opacity="0.65" filter="url(#glow)" />
+          {/* Predicted crack contour boundary */}
+          <polygon points={polyPts} fill="rgba(249, 115, 22, 0.75)" stroke="#ffffff" strokeWidth="1.5" />
+          <circle cx={x} cy={y} r="3" fill="#ffffff" stroke="#b91c1c" strokeWidth="1.2" />
+          <text x={x + 10} y={y - 8} fill="#f8fafc" fontSize="9" fontFamily="monospace" fontWeight="bold">
+            {item.clock_hour}h
+          </text>
+        </g>
+      )
+    }
+
+    if (item.bbox && item.bbox.length === 4) {
+      const p1 = cartesianToSvg(item.bbox[0], item.bbox[1])
+      const p2 = cartesianToSvg(item.bbox[2], item.bbox[3])
+      const bx = Math.min(p1.x, p2.x)
+      const by = Math.min(p1.y, p2.y)
+      const bw = Math.max(Math.abs(p2.x - p1.x), 16)
+      const bh = Math.max(Math.abs(p2.y - p1.y), 16)
+
+      return (
+        <g key={idx}>
+          {/* Thermal heat bloom box */}
+          <rect x={bx - 4} y={by - 4} width={bw + 8} height={bh + 8} rx="6" fill="#ef4444" opacity="0.65" filter="url(#glow)" />
+          {/* Predicted crack bounding box outline */}
+          <rect x={bx} y={by} width={bw} height={bh} rx="3" fill="rgba(249, 115, 22, 0.45)" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="3 2" />
+          <circle cx={x} cy={y} r="3" fill="#ffffff" stroke="#b91c1c" strokeWidth="1.2" />
+          <text x={x + 10} y={y - 8} fill="#f8fafc" fontSize="9" fontFamily="monospace" fontWeight="bold">
+            {item.clock_hour}h
+          </text>
+        </g>
+      )
+    }
+
+    return (
+      <g key={idx} filter="url(#glow)">
+        <circle cx={x} cy={y} r="12" fill="#ef4444" opacity="0.8" />
+        <circle cx={x} cy={y} r="4" fill="#ffffff" stroke="#b91c1c" strokeWidth="1.5" />
+        <text x={x + 10} y={y - 8} fill="#f8fafc" fontSize="9" fontFamily="monospace" fontWeight="bold">
+          {item.clock_hour}h
+        </text>
+      </g>
+    )
+  }
+
   const handleSimulate = async () => {
     setIsSimulating(true)
     try {
@@ -515,32 +584,14 @@ export const HistoricalAnalyticsView: React.FC<HistoricalAnalyticsViewProps> = (
                       </text>
                     </g>
                   ) : (
-                    analytics.latest_inspection_record?.defects.map((d, idx) => {
-                      const { x, y } = cartesianToSvg(d.dx_normalized ?? 0, d.dy_normalized ?? 0)
-                      return (
-                        <g key={idx} filter="url(#glow)">
-                          <circle cx={x} cy={y} r="12" fill="#ef4444" opacity="0.8" />
-                          <circle cx={x} cy={y} r="4" fill="#ffffff" stroke="#b91c1c" strokeWidth="1.5" />
-                          <text x={x + 10} y={y - 8} fill="#f8fafc" fontSize="9" fontFamily="monospace" fontWeight="bold">
-                            {d.clock_hour}h
-                          </text>
-                        </g>
-                      )
-                    })
+                    analytics.latest_inspection_record?.defects.map((d, idx) =>
+                      renderDefectElement(d, idx)
+                    )
                   )
                 ) : (
-                  currentHeatmap?.bins.map((bin, idx) => {
-                    const { x, y } = cartesianToSvg(bin.dx, bin.dy)
-                    return (
-                      <g key={idx} filter="url(#glow)">
-                        <circle cx={x} cy={y} r="12" fill="#ef4444" opacity="0.8" />
-                        <circle cx={x} cy={y} r="4" fill="#ffffff" stroke="#b91c1c" strokeWidth="1.5" />
-                        <text x={x + 10} y={y - 8} fill="#f8fafc" fontSize="9" fontFamily="monospace" fontWeight="bold">
-                          {bin.clock_hour}h
-                        </text>
-                      </g>
-                    )
-                  })
+                  currentHeatmap?.bins.map((bin, idx) =>
+                    renderDefectElement(bin, idx)
+                  )
                 )}
 
                 {/* Zero defects placeholder graphic in cumulative mode */}
@@ -554,11 +605,14 @@ export const HistoricalAnalyticsView: React.FC<HistoricalAnalyticsViewProps> = (
 
             {/* Heatmap Legend */}
             <div className="w-full flex flex-wrap items-center justify-between text-xs font-mono text-slate-400 pt-3 border-t border-slate-800/80 gap-3">
-              <div className="flex items-center gap-3">
-                <span className="text-slate-500">Defect Indicator:</span>
+              <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-red-500 border border-white"></span>
-                  <span>Exact Defect Centroid on Friction Swept Face</span>
+                  <span className="w-3.5 h-3.5 rounded bg-red-500/80 border border-orange-400"></span>
+                  <span>Predicted Crack Contour & Thermal Radiation Bloom</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-white border border-red-700"></span>
+                  <span>Centroid at Clock-Hour Position</span>
                 </span>
               </div>
 

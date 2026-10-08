@@ -14,7 +14,8 @@ class HistoricalDefectPoint(BaseModel):
     clock_hour: float = Field(..., description="Clock hour position (e.g. 1.0 = 1 o'clock, 6.0 = 6 o'clock)")
     zone_name: str = Field(default="Swept Friction Band", description="Rotor zone description")
     area_pct: float
-    bbox: List[float]
+    bbox: List[float] = Field(default_factory=list)
+    mask_polygon: Optional[List[List[float]]] = None
 
 
 class HistoricalInspectionRecord(BaseModel):
@@ -59,6 +60,9 @@ class HeatmapBin(BaseModel):
     defect_count: int
     top_process_code: str
     defect_type: str
+    bbox: List[float] = Field(default_factory=list)
+    mask_polygon: Optional[List[List[float]]] = None
+    area_pct: float = 0.5
 
 
 class MachineHeatmapData(BaseModel):

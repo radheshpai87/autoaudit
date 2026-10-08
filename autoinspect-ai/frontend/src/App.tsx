@@ -85,6 +85,9 @@ export function App() {
 
       const data: InspectionResponse = await res.json()
       setInspectionResult(data)
+
+      // Immediately refresh historical quality analytics & heatmaps with new inspection data
+      fetchAnalytics()
     } catch (err: any) {
       console.error('Inspection failed:', err)
       setErrorMessage(err.message || 'Inspection failed. Please try again.')

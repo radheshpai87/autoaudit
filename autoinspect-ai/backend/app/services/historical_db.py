@@ -66,9 +66,15 @@ class HistoricalDatabaseManager:
                     zone_name TEXT,
                     area_pct REAL,
                     bbox_json TEXT,
+                    mask_polygon_json TEXT,
                     FOREIGN KEY (inspection_id) REFERENCES inspections(id) ON DELETE CASCADE
                 );
             """)
+
+            try:
+                cursor.execute("ALTER TABLE defect_points ADD COLUMN mask_polygon_json TEXT;")
+            except Exception:
+                pass
 
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_inspections_timestamp ON inspections(timestamp);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_defect_process_code ON defect_points(process_code);")
@@ -116,8 +122,8 @@ class HistoricalDatabaseManager:
                     INSERT INTO defect_points (
                         inspection_id, defect_type, process_code, severity,
                         confidence, dx_normalized, dy_normalized, r_normalized,
-                        theta_degrees, clock_hour, zone_name, area_pct, bbox_json
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                        theta_degrees, clock_hour, zone_name, area_pct, bbox_json, mask_polygon_json
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
                 """, (
                     inspection_id,
                     d.defect_type,
@@ -131,7 +137,8 @@ class HistoricalDatabaseManager:
                     d.clock_hour,
                     d.zone_name,
                     d.area_pct,
-                    json.dumps(d.bbox)
+                    json.dumps(d.bbox),
+                    json.dumps(d.mask_polygon) if d.mask_polygon else None
                 ))
 
             conn.commit()
@@ -166,7 +173,8 @@ class HistoricalDatabaseManager:
                         clock_hour=dr["clock_hour"] if "clock_hour" in dr.keys() else 12.0,
                         zone_name=dr["zone_name"] if "zone_name" in dr.keys() else "Swept Friction Band",
                         area_pct=dr["area_pct"],
-                        bbox=json.loads(dr["bbox_json"]) if dr["bbox_json"] else []
+                        bbox=json.loads(dr["bbox_json"]) if dr["bbox_json"] else [],
+                        mask_polygon=json.loads(dr["mask_polygon_json"]) if "mask_polygon_json" in dr.keys() and dr["mask_polygon_json"] else None
                     )
                     for dr in d_rows
                 ]
