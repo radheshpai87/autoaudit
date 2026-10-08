@@ -31,6 +31,10 @@ export interface InspectApiResponse {
   model_name: string;
   summary_message: string;
   annotated_image_base64?: string;
+  mask_overlay_base64?: string;
+  image_width: number;
+  image_height: number;
+  brake_component_type?: string;
   condition_classification: {
     condition: "GOOD" | "ALMOST_WORN" | "FAULTY";
     confidence: number;
@@ -44,6 +48,7 @@ export interface InspectApiResponse {
     bbox: [number, number, number, number];
     area_percentage: number;
     location?: string;
+    mask_polygon?: Array<[number, number]> | null;
     explanation?: string;
     recommendation?: string;
   }>;
@@ -54,7 +59,17 @@ export async function uploadAndInspectImage(file: File): Promise<InspectApiRespo
   formData.append("image", file);
   const response = await fetch("/api/py/inspect", { method: "POST", body: formData });
   if (!response.ok) throw new Error(`Inference failed with status ${response.status}`);
-  return response.json() as Promise<InspectApiResponse>;
+  const body = await response.json() as Partial<InspectApiResponse>;
+  if (!body || typeof body.image_id !== "string" || !["completed", "failed", "no_defect"].includes(body.status ?? "") || !["PASS", "REVIEW", "REJECT"].includes(body.overall_status ?? "") || typeof body.model_name !== "string" || !Array.isArray(body.detections) || !Number.isFinite(body.image_width) || !Number.isFinite(body.image_height) || (body.image_width ?? 0) <= 0 || (body.image_height ?? 0) <= 0) {
+    throw new Error("The backend returned an invalid inspection response (missing image dimensions or detection data).");
+  }
+  if (body.detections.some((detection) => !Array.isArray(detection.bbox) || detection.bbox.length !== 4 || !detection.bbox.every(Number.isFinite) || detection.bbox[2] <= detection.bbox[0] || detection.bbox[3] <= detection.bbox[1] || !Number.isFinite(detection.confidence))) {
+    throw new Error("The backend returned invalid detection coordinates. No annotations were drawn.");
+  }
+  if (body.defect_count !== body.detections.length) {
+    throw new Error("The backend defect count did not match its detection list. No incomplete annotations were shown.");
+  }
+  return body as InspectApiResponse;
 }
 
 export async function checkBackendHealth(): Promise<{ isOnline: boolean; mode: string }> {

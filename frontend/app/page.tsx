@@ -70,7 +70,9 @@ export default function Home() {
     setSelectedPart(row.id);
     const url = new URL(window.location.href); url.searchParams.set("part", row.id); window.history.replaceState({}, "", url);
     if (response.condition_classification.condition === "FAULTY" || response.overall_status === "REJECT") {
-      setQualityAlert("Critical Defect Detected: Thermal Crack on current inspection. Increased failure frequency on Line 01.");
+      const actualClasses = [...new Set(response.detections.map((detection) => detection.defect_type))];
+      const finding = actualClasses.length ? actualClasses.join(", ") : "backend condition assessment";
+      setQualityAlert(`Inspection ${response.image_id}: ${finding} flagged · disposition ${response.overall_status}. Review the returned findings; no machine cause was identified.`);
       window.setTimeout(() => setQualityAlert(""), 12_000);
     }
   }, [inspections]);
@@ -95,7 +97,7 @@ export default function Home() {
     void autoAuditApi.saveReview(id, review).catch(() => setNotice("Review saved locally; backend persistence is not available."));
   }, [inspections]);
 
-  return <main className="app-shell">
+  return <main className={`app-shell ${active === "AI Inspection Studio" ? "inspection-mode" : ""}`}>
     <aside className="sidebar">
       <a className="brand" href="?view=Plant%20Overview" onClick={(e) => { e.preventDefault(); navigate("Plant Overview"); }}><span className="brand-mark"><Icon name="disc" size={21}/></span><span className="brand-copy"><strong>autoaudit</strong><small>QUALITY OPERATIONS</small></span></a>
       <div className="plant-select"><span className="plant-dot"/><span><b>Plant North · 01</b><small>Manufacturing campus</small></span><span className="plant-chevron">⌄</span></div>
