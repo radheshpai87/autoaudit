@@ -84,6 +84,7 @@ class YOLOSegmentationModel(BaseDefectModel):
             from app.services.brake_disc_explanations import get_brake_disc_explanation
             from app.models.schemas import AnomalyOrigin
             exp, rec = get_brake_disc_explanation("Unknown Anomaly")
+            fmea_eval = SeverityEngine.evaluate_fmea("Unknown Anomaly", 0.52, 2.2, "Outer Friction Ring (Swept Area)")
             return [
                 DefectDetection(
                     defect_type="Unknown Anomaly",
@@ -103,6 +104,7 @@ class YOLOSegmentationModel(BaseDefectModel):
                     anomaly_origin=AnomalyOrigin.UNKNOWN,
                     explanation=exp,
                     recommendation=rec,
+                    fmea=fmea_eval,
                 )
             ]
 
@@ -194,6 +196,7 @@ class YOLOSegmentationModel(BaseDefectModel):
             ):
                 continue
 
+            fmea_eval = SeverityEngine.evaluate_fmea(defect_type, conf, area_pct, location)
             detections.append(
                 DefectDetection(
                     defect_type=defect_type.replace('_', ' ').title(),
@@ -207,6 +210,7 @@ class YOLOSegmentationModel(BaseDefectModel):
                     anomaly_origin=origin_enum,
                     explanation=exp,
                     recommendation=rec,
+                    fmea=fmea_eval,
                 )
             )
 
@@ -298,6 +302,7 @@ class YOLOSegmentationModel(BaseDefectModel):
                 loc = "Outer Friction Ring (Swept Area)" if dist_from_c > (r_inner + r_outer)/2 else "Inner Friction Ring"
                 
                 exp, rec = get_brake_disc_explanation("crack")
+                fmea_eval = SeverityEngine.evaluate_fmea("Surface Radial Crack", conf, area_pct, loc)
                 
                 epsilon = 0.02 * perimeter
                 approx = cv2.approxPolyDP(c, epsilon, True)
@@ -318,6 +323,7 @@ class YOLOSegmentationModel(BaseDefectModel):
                         anomaly_origin=AnomalyOrigin.SURFACE,
                         explanation=exp,
                         recommendation=rec,
+                        fmea=fmea_eval,
                     )
                 )
 
@@ -391,6 +397,7 @@ class YOLOSegmentationModel(BaseDefectModel):
                     sev = SeverityLevel.MEDIUM
 
                 exp, rec = get_brake_disc_explanation(defect_type)
+                fmea_eval = SeverityEngine.evaluate_fmea(defect_type, conf, area_pct, "Friction Ring / Metal Face")
                 
                 # Approx polygon
                 epsilon = 0.02 * cv2.arcLength(cnt, True)
@@ -412,6 +419,7 @@ class YOLOSegmentationModel(BaseDefectModel):
                         anomaly_origin=origin,
                         explanation=exp,
                         recommendation=rec,
+                        fmea=fmea_eval,
                     )
                 )
 

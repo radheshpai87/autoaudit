@@ -14,6 +14,36 @@ export interface ConditionClassification {
   triage_verdict: string
 }
 
+export interface FMEAEvaluation {
+  station: string
+  process_code: string
+  potential_failure_mode: string
+  potential_failure_effects: string
+  potential_causes: string
+  severity_s: number
+  occurrence_o: number
+  detection_d: number
+  rpn: number
+  rpn_rank_tier: string
+  recommended_action: string
+  current_control_detection?: string
+  associated_quality_defect?: string
+}
+
+export interface ProductionLineFMEASummary {
+  paper_reference: string
+  system_title: string
+  critical_station: string
+  highest_rpn: number
+  max_severity_s: number
+  rpn_priority_tier: string
+  line_decision: string
+  dtv_tolerance_status: string
+  runout_tolerance_status: string
+  parallelism_tolerance_status: string
+  recommended_process_adjustments: string[]
+}
+
 export interface DefectDetection {
   defect_type: string
   confidence: number
@@ -26,6 +56,7 @@ export interface DefectDetection {
   anomaly_origin?: AnomalyOrigin
   explanation?: string
   recommendation?: string
+  fmea?: FMEAEvaluation
 }
 
 export interface InspectionResponse {
@@ -36,6 +67,8 @@ export interface InspectionResponse {
   detections: DefectDetection[]
   condition_classification: ConditionClassification
   primary_anomaly_origin?: AnomalyOrigin | null
+  top_fmea_risk?: FMEAEvaluation
+  fmea_quality_control?: ProductionLineFMEASummary
   inference_mode: 'real_ai' | 'demo_mock'
   model_name: string
   summary_message: string

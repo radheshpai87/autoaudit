@@ -13,6 +13,7 @@ from app.models.schemas import (
     DefectDetection,
     SeverityLevel,
 )
+from app.services.severity_engine import SeverityEngine
 from app.inference.manager import ModelManager
 from app.inference.mock_model import MockDefectModel
 from app.utils.visualizer import draw_inspection_overlay, encode_image_to_base64
@@ -146,6 +147,11 @@ class InspectionService:
         elif any(d.anomaly_origin == AnomalyOrigin.UNKNOWN for d in detections):
             primary_origin = AnomalyOrigin.UNKNOWN
 
+        # Calculate Applied Sciences 2020 FMEA production line quality control assessment
+        fmea_summary = SeverityEngine.build_production_line_fmea_summary(detections)
+        fmea_risks = [d.fmea for d in detections if getattr(d, "fmea", None) is not None]
+        top_fmea_risk = max(fmea_risks, key=lambda f: f.rpn) if fmea_risks else None
+
         return InspectionResponse(
             image_id=image_id,
             status=status_text,
@@ -154,6 +160,8 @@ class InspectionService:
             detections=detections,
             condition_classification=condition_result,
             primary_anomaly_origin=primary_origin,
+            top_fmea_risk=top_fmea_risk,
+            fmea_quality_control=fmea_summary,
             inference_mode="real_ai" if model.is_real_model else "demo_mock",
             model_name=model.model_name,
             summary_message=summary_message,
