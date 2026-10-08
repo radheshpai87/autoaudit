@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AutoAuditView } from "../components/autoaudit/Views";
 import { seedInspections } from "../lib/mock-data";
-import { autoAuditApi } from "../lib/api";
+import { autoAuditApi, checkBackendHealth, type InspectApiResponse } from "../lib/api";
 import type { AuditLog, InspectorReview, Inspection } from "../lib/types";
 
 type ViewName = "Plant Overview" | "AI Inspection Studio" | "Batch Quality Analytics" | "Fault Intelligence Board" | "Human Review";
@@ -33,8 +33,11 @@ export default function Home() {
   const [selectedPart, setSelectedPart] = useState("BD-1047");
   const [clock, setClock] = useState("");
   const [notice, setNotice] = useState("");
+  const [backend, setBackend] = useState<{ isOnline: boolean; mode: string } | null>(null);
+  const [qualityAlert, setQualityAlert] = useState("");
 
   useEffect(() => {
+    void checkBackendHealth().then(setBackend);
     if (autoAuditApi !== undefined && process.env.NEXT_PUBLIC_AUTOAUDIT_API === "http") {
       void autoAuditApi.listInspections().then(setInspections).catch(() => setNotice("Backend provider is selected but /api/inspections is not available."));
     }
@@ -59,6 +62,18 @@ export default function Home() {
     window.addEventListener("popstate", onPopState);
     return () => { window.clearInterval(timer); window.removeEventListener("popstate", onPopState); };
   }, []);
+
+  const addLiveInspection = useCallback((row: Inspection, response: InspectApiResponse) => {
+    const updated = [row, ...inspections.filter((entry) => entry.id !== row.id)];
+    setInspections(updated);
+    try { window.localStorage.setItem("autoaudit-inspections-v2", JSON.stringify(updated)); } catch { /* Keep this inspection in current-session state. */ }
+    setSelectedPart(row.id);
+    const url = new URL(window.location.href); url.searchParams.set("part", row.id); window.history.replaceState({}, "", url);
+    if (response.condition_classification.condition === "FAULTY" || response.overall_status === "REJECT") {
+      setQualityAlert("Critical Defect Detected: Thermal Crack on current inspection. Increased failure frequency on Line 01.");
+      window.setTimeout(() => setQualityAlert(""), 12_000);
+    }
+  }, [inspections]);
 
   const selectPart = useCallback((id: string) => {
     setSelectedPart(id);
@@ -89,8 +104,10 @@ export default function Home() {
       <div className="sidebar-bottom"><div className="support-card"><div className="support-icon"><Icon name="activity" size={17}/></div><div><strong>Demo workspace</strong><span>Mock provider connected</span></div><span className="online-dot"/></div><div className="user-card"><div className="avatar">AR</div><div className="user-meta"><b>Alex Rivera</b><span>Quality manager</span></div><span className="user-role">DEMO</span></div></div>
     </aside>
     <section className="content-area">
-      <header className="topbar"><div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><b>{active}</b></div><div className="top-actions"><span className="aa-top-demo">DEMO DATA</span><button className="button button-secondary small-button" onClick={() => { if (window.confirm("Reset local demo reviews and audit history?")) { setInspections(seedInspections); window.localStorage.removeItem("autoaudit-inspections-v2"); window.localStorage.removeItem("autoaudit-audit-log-v2"); setNotice("Local demo reviews and audit history reset."); window.setTimeout(() => setNotice(""), 4500); } }}>Reset demo</button><button className="icon-button notification-button" aria-label="Show data-source details" onClick={() => { setNotice("Demo fixtures are active. No backend or YOLO model is connected."); window.setTimeout(() => setNotice(""), 4500); }}>ⓘ</button><div className="top-divider"/><div className="top-date"><span className="date-label">{clock ? clock.split(", ").slice(0, 2).join(", ").toUpperCase() : "LOCAL PLANT TIME"}</span><b>{clock ? clock.split(", ").at(-1) : "--:--"} <span>IST</span></b></div></div></header>
-      <div className="page-content"><AutoAuditView view={active} inspections={inspections} selectedPart={selectedPart} setSelectedPart={selectPart} navigate={navigate} saveReview={saveReview}/><footer className="page-footer"><span>AutoAudit <span>·</span> Manufacturing quality, in focus</span><span>DEMONSTRATION DATA · NOT FOR PRODUCTION DISPOSITION</span></footer></div>
+      <header className="topbar"><div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><b>{active}</b></div><div className="top-actions"><span className="aa-top-demo">{backend?.isOnline ? (backend.mode === "real_ai" ? "REAL YOLO AI" : "BACKEND · MOCK") : "DEMO DATA"}</span><button className="button button-secondary small-button" onClick={() => { if (window.confirm("Reset local demo reviews and audit history?")) { setInspections(seedInspections); window.localStorage.removeItem("autoaudit-inspections-v2"); window.localStorage.removeItem("autoaudit-audit-log-v2"); setNotice("Local demo reviews and audit history reset."); window.setTimeout(() => setNotice(""), 4500); } }}>Reset demo</button><button className="icon-button notification-button" aria-label="Show data-source details" onClick={() => { setNotice(backend?.isOnline ? `FastAPI backend online · ${backend.mode}` : "Backend offline. Local demonstration fixtures remain available."); window.setTimeout(() => setNotice(""), 4500); }}>ⓘ</button><div className="top-divider"/><div className="top-date"><span className="date-label">{clock ? clock.split(", ").slice(0, 2).join(", ").toUpperCase() : "LOCAL PLANT TIME"}</span><b>{clock ? clock.split(", ").at(-1) : "--:--"} <span>IST</span></b></div></div></header>
+      {backend && !backend.isOnline && <div className="aa-backend-warning" role="status"><span>Backend offline on :8000 — operating in local demonstration mode</span><button className="button button-secondary small-button" onClick={() => { setBackend(null); void checkBackendHealth().then(setBackend); }}>Retry connection</button></div>}
+      {qualityAlert && <div className="aa-quality-alert" role="alert"><b>{qualityAlert}</b><button aria-label="Dismiss critical defect alert" onClick={() => setQualityAlert("")}>×</button></div>}
+      <div className="page-content"><AutoAuditView view={active} inspections={inspections} selectedPart={selectedPart} setSelectedPart={selectPart} navigate={navigate} saveReview={saveReview} backendOnline={backend?.isOnline ?? false} inferenceMode={backend?.mode ?? "offline"} onInspectionCreated={addLiveInspection}/><footer className="page-footer"><span>AutoAudit <span>·</span> Manufacturing quality, in focus</span><span>{backend?.isOnline ? "LIVE INSPECTION · DEMO OPERATIONS DATA" : "LOCAL DEMONSTRATION DATA · NOT FOR PRODUCTION DISPOSITION"}</span></footer></div>
     </section>
     {notice && <div className="toast"><span className="toast-check">i</span>{notice}</div>}
   </main>;

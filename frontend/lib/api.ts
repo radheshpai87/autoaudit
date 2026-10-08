@@ -21,3 +21,49 @@ export const httpApi: AutoAuditApi = {
 };
 
 export const autoAuditApi: AutoAuditApi = process.env.NEXT_PUBLIC_AUTOAUDIT_API === "http" ? httpApi : mockApi;
+
+export interface InspectApiResponse {
+  image_id: string;
+  status: "completed" | "failed" | "no_defect";
+  overall_status: "PASS" | "REVIEW" | "REJECT";
+  defect_count: number;
+  inference_mode: "real_ai" | "demo_mock";
+  model_name: string;
+  summary_message: string;
+  annotated_image_base64?: string;
+  condition_classification: {
+    condition: "GOOD" | "ALMOST_WORN" | "FAULTY";
+    confidence: number;
+    wear_index_score: number;
+    triage_verdict: string;
+  };
+  detections: Array<{
+    defect_type: string;
+    confidence: number;
+    severity: "low" | "medium" | "high" | "critical";
+    bbox: [number, number, number, number];
+    area_percentage: number;
+    location?: string;
+    explanation?: string;
+    recommendation?: string;
+  }>;
+}
+
+export async function uploadAndInspectImage(file: File): Promise<InspectApiResponse> {
+  const formData = new FormData();
+  formData.append("image", file);
+  const response = await fetch("/api/py/inspect", { method: "POST", body: formData });
+  if (!response.ok) throw new Error(`Inference failed with status ${response.status}`);
+  return response.json() as Promise<InspectApiResponse>;
+}
+
+export async function checkBackendHealth(): Promise<{ isOnline: boolean; mode: string }> {
+  try {
+    const response = await fetch("/api/py/health", { signal: AbortSignal.timeout(5000) });
+    if (!response.ok) return { isOnline: false, mode: "offline" };
+    const data = await response.json() as { inference_mode?: string };
+    return { isOnline: true, mode: data.inference_mode ?? "unknown" };
+  } catch {
+    return { isOnline: false, mode: "offline" };
+  }
+}

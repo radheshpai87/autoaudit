@@ -5,12 +5,60 @@ import Image from "next/image";
 import { demoBatches, engineeringRule, machines, productionLines } from "../../lib/mock-data";
 import { calculateFaultTrends, defectCounts, statusCounts } from "../../lib/calculations";
 import { mechanicalKnowledge } from "../../lib/mechanical-knowledge";
-import type { Disposition, DefectClass, Inspection, InspectorReview, ProductionLine } from "../../lib/types";
+import { uploadAndInspectImage, type InspectApiResponse } from "../../lib/api";
+import type { Disposition, DefectClass, Inspection, InspectorReview, ProductionLine, Severity } from "../../lib/types";
 
 type ViewName = "Plant Overview" | "AI Inspection Studio" | "Batch Quality Analytics" | "Fault Intelligence Board" | "Human Review";
-type Props = { view: ViewName; inspections: Inspection[]; selectedPart: string; setSelectedPart: (id: string) => void; navigate: (view: ViewName, partId?: string) => void; saveReview: (id: string, review: InspectorReview) => void };
+type Props = { view: ViewName; inspections: Inspection[]; selectedPart: string; setSelectedPart: (id: string) => void; navigate: (view: ViewName, partId?: string) => void; saveReview: (id: string, review: InspectorReview) => void; backendOnline: boolean; inferenceMode: string; onInspectionCreated: (row: Inspection, response: InspectApiResponse) => void };
 const classes: DefectClass[] = ["Surface Crack", "Scratch", "Scoring", "Pitting", "Inclusion", "Casting Defect", "Machining Defect", "Chipping / edge damage", "Unknown Anomaly"];
 const dispositions: Disposition[] = ["PASS", "REVIEW", "REJECT"];
+
+function mapBackendClass(value: string): DefectClass {
+  const normalized = value.toLowerCase();
+  if (normalized.includes("crack")) return "Surface Crack";
+  if (normalized.includes("scoring") || normalized.includes("grooving")) return "Scoring";
+  if (normalized.includes("pitting") || normalized.includes("cavitation") || normalized.includes("corrosion")) return "Pitting";
+  if (normalized.includes("inclusion")) return "Inclusion";
+  if (normalized.includes("flange") || normalized.includes("distortion")) return "Machining Defect";
+  if (normalized.includes("unknown")) return "Unknown Anomaly";
+  return "Unknown Anomaly";
+}
+
+function mapBackendSeverity(value: string): Severity {
+  const normalized = value.toLowerCase();
+  return normalized === "critical" ? "Critical" : normalized === "high" ? "High" : normalized === "medium" ? "Medium" : "Low";
+}
+
+function mapBackendInspection(result: InspectApiResponse, file: File): Inspection {
+  const first = result.detections[0];
+  const defect = first ? mapBackendClass(first.defect_type) : "None detected";
+  const severity = first ? result.detections.map((item) => mapBackendSeverity(item.severity)).sort((a, b) => ["None", "Low", "Medium", "High", "Critical"].indexOf(b) - ["None", "Low", "Medium", "High", "Critical"].indexOf(a))[0] : "None";
+  const assessmentSeverity: Severity = first ? severity as Severity : "Low";
+  const mechanicalExplanation = first ? {
+    defectClass: mapBackendClass(first.defect_type),
+    whatItIs: `${first.defect_type} identified in the uploaded component image.`,
+    principle: first.explanation || result.summary_message,
+    possibleContributors: [],
+    potentialEffect: `Backend condition assessment: ${result.condition_classification.condition}. ${result.condition_classification.triage_verdict}`,
+    suggestedAction: first.recommendation || "Review the backend result with a qualified quality engineer.",
+  } : undefined;
+  return {
+    id: result.image_id,
+    batchId: "BATCH_2026_B127",
+    model: file.name,
+    line: "Line 01 · High-speed",
+    machine: "M-01",
+    station: "Live image inspection",
+    time: new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date()),
+    defect,
+    severity,
+    status: result.overall_status,
+    confidence: first?.confidence ?? result.condition_classification.confidence,
+    detections: result.detections.map((item, index) => ({ id: `${result.image_id}-${index + 1}`, className: mapBackendClass(item.defect_type), confidence: item.confidence, region: item.location || "Component surface", bbox: item.bbox, severity: mapBackendSeverity(item.severity) })),
+    mechanicalExplanation,
+    assessment: { severity: assessmentSeverity, disposition: result.overall_status, ruleId: result.model_name, ruleDescription: result.summary_message, defectAreaRatioPercent: first?.area_percentage, provisional: true },
+  };
+}
 
 function Badge({ children, tone = "neutral" }: { children: React.ReactNode; tone?: string }) { return <span className={`aa-badge ${tone}`}>{children}</span>; }
 function Header({ eyebrow, title, subtitle, action }: { eyebrow: string; title: string; subtitle: string; action?: React.ReactNode }) { return <div className="aa-page-heading"><div><div className="eyebrow"><span className="eyebrow-line"/>{eyebrow}</div><h1>{title}</h1><p>{subtitle}</p></div>{action && <div className="aa-page-actions">{action}</div>}</div>; }
@@ -59,24 +107,53 @@ function RotorIllustration({ zoom, overlays, selectedDetection, detections, opac
     </g></svg><div className="aa-image-caption"><span>SVG illustration · demo annotations</span><span>Image-space only · no scale calibration</span></div></div>;
 }
 
-function Inspector({ inspections, selectedPart, setSelectedPart, navigate }: Props) {
+function Inspector({ inspections, selectedPart, setSelectedPart, navigate, backendOnline, inferenceMode, onInspectionCreated }: Props) {
   const item = inspections.find((r) => r.id === selectedPart) ?? inspections[0]; const [selectedDetection, setSelectedDetection] = useState(item.detections[0]?.id ?? ""); const [boxes, setBoxes] = useState(true); const [masks, setMasks] = useState(false); const [heatmap, setHeatmap] = useState(false); const [opacity, setOpacity] = useState(.65); const [zoom, setZoom] = useState(1); const [full, setFull] = useState(false);
   const selectableInspections = inspections.filter((row) => row.status !== "PASS" || /^BD-\d{4}$/.test(row.id) || row.id === selectedPart);
-  const [file, setFile] = useState<File | null>(null); const [preview, setPreview] = useState(""); const [fileMessage, setFileMessage] = useState(""); const inputRef = useRef<HTMLInputElement>(null); const [demoLoaded, setDemoLoaded] = useState(true);
+  const [file, setFile] = useState<File | null>(null); const [preview, setPreview] = useState(""); const [annotatedPreview, setAnnotatedPreview] = useState(""); const [fileMessage, setFileMessage] = useState(""); const [uploadError, setUploadError] = useState(""); const [scanning, setScanning] = useState(false); const [liveResult, setLiveResult] = useState<InspectApiResponse | null>(null); const inputRef = useRef<HTMLInputElement>(null); const [demoLoaded, setDemoLoaded] = useState(true);
   useEffect(() => { if (!file) { setPreview(""); return; } const url = URL.createObjectURL(file); setPreview(url); return () => URL.revokeObjectURL(url); }, [file]);
-  const chooseFile = (next: File | undefined) => { if (!next) return; if (!["image/png", "image/jpeg", "image/webp"].includes(next.type) || next.size > 15 * 1024 * 1024) { setFileMessage("Choose a PNG, JPG, or WEBP image under 15 MB."); return; } setFile(next); setDemoLoaded(false); setFileMessage("Preview only · model inference is not connected."); };
+  const inspectFile = async (next: File) => {
+    setFile(next); setAnnotatedPreview(""); setLiveResult(null); setDemoLoaded(false); setUploadError(""); setFileMessage("");
+    if (!backendOnline) { setUploadError("Backend offline on :8000 — operating in local demonstration mode. The image is available as a preview only."); return; }
+    setScanning(true); setFileMessage("Running YOLOv8 Inspection...");
+    try {
+      const response = await uploadAndInspectImage(next);
+      if (response.status === "failed") throw new Error(response.summary_message || "The backend could not inspect this image.");
+      const record = mapBackendInspection(response, next);
+      setLiveResult(response);
+      if (response.annotated_image_base64) setAnnotatedPreview(response.annotated_image_base64.startsWith("data:") ? response.annotated_image_base64 : `data:image/jpeg;base64,${response.annotated_image_base64}`);
+      onInspectionCreated(record, response);
+      setFileMessage(`${response.summary_message} · ${response.model_name}`);
+    } catch (error) {
+      setUploadError(`${error instanceof Error ? error.message : "Inspection request failed."} The bundled demo records remain available.`);
+      setFileMessage("Inspection unavailable · preview only.");
+    } finally { setScanning(false); }
+  };
+  const chooseFile = (next: File | undefined) => { if (!next) return; if (!["image/png", "image/jpeg", "image/webp"].includes(next.type) || next.size > 15 * 1024 * 1024) { setFileMessage("Choose a JPG, PNG, or WEBP image under 15 MB."); return; } void inspectFile(next); };
+  const loadSample = async (name: "crack" | "clean" | "surface_defect") => {
+    setUploadError(""); setFileMessage("Loading backend sample...");
+    try {
+      const response = await fetch(`/api/py/sample/${name}`);
+      if (!response.ok) throw new Error(`Sample image unavailable (${response.status}).`);
+      const blob = await response.blob();
+      const sample = new File([blob], `autoaudit-sample-${name}.jpg`, { type: blob.type || "image/jpeg" });
+      await inspectFile(sample);
+    } catch (error) { setUploadError(`${error instanceof Error ? error.message : "Could not load sample."} Check that the FastAPI backend is running.`); }
+  };
   const selectedClass: DefectClass = item.detections.find((d) => d.id === selectedDetection)?.className ?? (item.defect === "None detected" ? "Unknown Anomaly" : item.defect);
-  const explanation = mechanicalKnowledge[selectedClass];
+  const explanation = item.mechanicalExplanation ?? mechanicalKnowledge[selectedClass];
+  const currentLiveResult = liveResult?.image_id === item.id ? liveResult : null;
   return <>
-    <Header eyebrow="AI INSPECTION STUDIO" title="AI Inspection Studio" subtitle="Image preview, mechanical context, and linked process evidence" action={<><label className="aa-part-select">Part<select value={item.id} onChange={(e) => { setSelectedPart(e.target.value); setSelectedDetection(""); setFile(null); setDemoLoaded(true); }} aria-label="Select component">{selectableInspections.map((r) => <option key={r.id} value={r.id}>{r.id}</option>)}</select></label><Badge tone="demo">DEMO INSPECTION</Badge></>}/>
+    <Header eyebrow="AI INSPECTION STUDIO" title="AI Inspection Studio" subtitle="Upload or select a brake component for YOLO inspection" action={<><label className="aa-part-select">Part<select value={item.id} onChange={(e) => { setSelectedPart(e.target.value); setSelectedDetection(""); setFile(null); setAnnotatedPreview(""); setLiveResult(null); setDemoLoaded(true); }} aria-label="Select component">{selectableInspections.map((r) => <option key={r.id} value={r.id}>{r.id}</option>)}</select></label><Badge tone={currentLiveResult?.inference_mode === "real_ai" || (!currentLiveResult && backendOnline && inferenceMode === "real_ai") ? "passed" : currentLiveResult || (backendOnline && inferenceMode === "demo_mock") ? "neutral" : "demo"}>{currentLiveResult ? (currentLiveResult.inference_mode === "real_ai" ? "REAL YOLO AI" : "MOCK") : backendOnline ? (inferenceMode === "real_ai" ? "REAL YOLO AI READY" : "MOCK BACKEND READY") : "DEMO INSPECTION"}</Badge></>}/>
     <div className={`aa-inspector-grid ${full ? "fullscreen-image" : ""}`}><section className="panel aa-inspector-image"><div className="panel-heading"><div><h2>Visual inspection</h2><p>{item.id} · {item.batchId}</p></div><button className="icon-button" onClick={() => setFull(!full)} aria-label={full ? "Exit fullscreen" : "Expand image"}>⛶</button></div>
-      {preview ? <div className="aa-rotor-stage"><Image src={preview} unoptimized width={640} height={440} alt={`Uploaded image preview: ${file?.name}`} style={{ maxWidth: "100%", maxHeight: 440, width: "auto", height: "auto", objectFit: "contain", transform: `scale(${zoom})` }}/><div className="aa-image-caption"><span>{file?.name}</span><span>Preview only · no inference</span></div></div> : demoLoaded ? <RotorIllustration zoom={zoom} overlays={{ boxes, masks, heatmap }} selectedDetection={selectedDetection} detections={item.detections} opacity={opacity}/> : <div className="aa-rotor-stage" style={{ minHeight: 300, display: "grid", placeItems: "center" }}>No image selected.</div>}
-      <div className="aa-viewer-toolbar"><button className="button button-secondary" onClick={() => inputRef.current?.click()}>Upload image</button><input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => chooseFile(e.target.files?.[0])}/><button className="button button-secondary" onClick={() => { setFile(null); setDemoLoaded(true); setFileMessage("Demo annotations loaded for the bundled illustration."); }}>Load demo inspection</button><span>{fileMessage}</span></div>
+      {preview ? <div className="aa-rotor-stage" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); chooseFile(e.dataTransfer.files?.[0]); }}><Image src={annotatedPreview || preview} unoptimized width={640} height={440} alt={annotatedPreview ? `YOLO annotated inspection: ${file?.name}` : `Uploaded image preview: ${file?.name}`} style={{ maxWidth: "100%", maxHeight: 440, width: "auto", height: "auto", objectFit: "contain", transform: `scale(${zoom})` }}/><div className="aa-image-caption"><span>{file?.name}</span><span>{annotatedPreview ? "Backend annotated output" : "Image preview"}</span></div>{scanning && <div className="aa-scanning-overlay"><span className="aa-spinner"/>Running YOLOv8 Inspection...</div>}</div> : demoLoaded ? <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); chooseFile(e.dataTransfer.files?.[0]); }}><RotorIllustration zoom={zoom} overlays={{ boxes, masks, heatmap }} selectedDetection={selectedDetection} detections={item.detections} opacity={opacity}/></div> : <div className="aa-rotor-stage" style={{ minHeight: 300, display: "grid", placeItems: "center" }}>Drop a brake component image here, or choose a sample below.</div>}
+      <div className="aa-viewer-toolbar"><button className="button button-secondary" onClick={() => inputRef.current?.click()} disabled={scanning}>Upload image</button><input ref={inputRef} type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" hidden onChange={(e) => { chooseFile(e.target.files?.[0]); e.currentTarget.value = ""; }}/>{([ ["crack", "Load Sample Crack"], ["clean", "Load Clean Rotor"], ["surface_defect", "Load Surface Defect"] ] as const).map(([name, label]) => <button key={name} className="button button-secondary" disabled={scanning || !backendOnline} onClick={() => void loadSample(name)}>{label}</button>)}<button className="button button-secondary" disabled={scanning} onClick={() => { setFile(null); setAnnotatedPreview(""); setLiveResult(null); setDemoLoaded(true); setUploadError(""); setFileMessage("Bundled local demo fixture loaded."); }}>Load Demo Inspection</button></div>
+      {(fileMessage || uploadError || !backendOnline) && <div className={uploadError ? "aa-caution" : "aa-muted"}>{uploadError || fileMessage || (backendOnline ? "" : "Backend offline on :8000 — operating in local demonstration mode")}</div>}
       <div className="aa-viewer-toolbar"><button onClick={() => setZoom(Math.max(.8, zoom - .1))} aria-label="Zoom out">−</button><span>{Math.round(zoom * 100)}%</span><button onClick={() => setZoom(Math.min(1.5, zoom + .1))} aria-label="Zoom in">+</button><button onClick={() => setZoom(1)}>Reset zoom</button><label>Overlay opacity <input type="range" min=".2" max="1" step=".05" value={opacity} onChange={(e) => setOpacity(Number(e.target.value))}/></label></div>
       <div className="aa-overlay-toggles"><label><input type="checkbox" disabled={!demoLoaded} checked={boxes && demoLoaded} onChange={(e) => setBoxes(e.target.checked)}/> Bounding boxes</label><label><input type="checkbox" disabled={!demoLoaded} checked={masks && demoLoaded} onChange={(e) => setMasks(e.target.checked)}/> Segmentation masks <Badge tone="demo">DEMO</Badge></label><label><input type="checkbox" disabled={!demoLoaded} checked={heatmap && demoLoaded} onChange={(e) => setHeatmap(e.target.checked)}/> Anomaly heatmap <Badge tone="demo">DEMO</Badge></label></div>{!demoLoaded && <div className="aa-caution">AI inference is not connected. Uploaded images are previewed only and receive no detections or automated disposition.</div>}
-      {demoLoaded ?       <div className="aa-detections"><b>Detections ({item.detections.length})</b>{item.detections.length ? item.detections.map((d) => <button className={`aa-detection ${selectedDetection === d.id ? "active" : ""}`} key={d.id} title={`${(d.confidence * 100).toFixed(1)}% demonstration confidence; not a production prediction`} onClick={() => { setSelectedDetection(d.id); setBoxes(true); }}><span className="severity-dot critical"/><span><strong>{item.review?.finalClass ?? d.className}</strong><small>{d.region} · {(d.confidence * 100).toFixed(0)}% confidence <em>Demo prediction</em></small></span><b>{d.severity}</b></button>) : <p className="aa-muted">No defects in this demo inspection.</p>}</div> : <div className="aa-detections"><b>Inspection results</b><p className="aa-muted">No analysis is shown for this upload because model inference is not connected.</p></div>}
+      {demoLoaded ? <div className="aa-detections"><b>{currentLiveResult ? `YOLO detections (${item.detections.length})` : `Detections (${item.detections.length})`}</b>{item.detections.length ? item.detections.map((d) => <button className={`aa-detection ${selectedDetection === d.id ? "active" : ""}`} key={d.id} title={`${(d.confidence * 100).toFixed(1)}% ${currentLiveResult ? "backend" : "demonstration"} confidence`} onClick={() => { setSelectedDetection(d.id); setBoxes(true); }}><span className="severity-dot critical"/><span><strong>{item.review?.finalClass ?? d.className}</strong><small>{d.region} · {(d.confidence * 100).toFixed(0)}% confidence <em>{currentLiveResult ? "Backend result" : "Demo prediction"}</em></small></span><b>{d.severity}</b></button>) : <p className="aa-muted">{currentLiveResult ? "Backend returned no defect detections." : "No defects in this demo inspection."}</p>}</div> : <div className="aa-detections"><b>Inspection results</b><p className="aa-muted">No analysis is shown for this upload because model inference is not connected.</p></div>}
     </section>
-    <section className="panel aa-assessment">{demoLoaded ? <div><div className="panel-heading"><div><h2>Mechanical explanation</h2><p>Curated engineering reference · not a diagnosis</p></div></div><h3>{explanation.defectClass}: what it is</h3><p>{explanation.whatItIs}</p><h3>Mechanical principle</h3><p>{explanation.principle}</p><h3>Possible contributors</h3><ul>{explanation.possibleContributors.map((x) => <li key={x}>{x}</li>)}</ul><h3>Potential effect</h3><p>{explanation.potentialEffect}</p><div className="aa-rule"><div className="aa-rule-head"><strong>Suggested next step</strong><Badge tone="review">Engineering review</Badge></div><p>{explanation.suggestedAction}</p></div><div className="aa-caution">General mechanism reference only; it does not confirm root cause or component safety. Demonstration measurements use image-space values only.</div><div className="aa-rule" style={{ marginTop: 16 }}><div className="aa-rule-head"><strong>{engineeringRule.id}</strong><Badge tone="demo">{engineeringRule.version}</Badge></div><p>{engineeringRule.description}</p><ul>{engineeringRule.evidence.map((e) => <li key={e}>{e}</li>)}</ul></div></div> : <div><div className="panel-heading"><div><h2>Mechanical explanation</h2><p>Available for the selected demo record only</p></div></div><div className="aa-caution">The uploaded image has no associated analysis. Load the demo inspection to review curated mechanical context for the selected fixture.</div></div>}</section>
+    <section className="panel aa-assessment">{demoLoaded ? <div><div className="panel-heading"><div><h2>{currentLiveResult ? "Engineering Conformity" : "Mechanical Physics Principle"}</h2><p>{currentLiveResult ? `Backend assessment · ${currentLiveResult.model_name}` : "Curated engineering reference · not a diagnosis"}</p></div></div>{currentLiveResult && <><div className={`aa-disposition ${item.status.toLowerCase()}`}><span>BACKEND DISPOSITION</span><strong>{item.status}</strong><b>{currentLiveResult.condition_classification.condition} · {currentLiveResult.condition_classification.triage_verdict}</b><small>Condition confidence {(currentLiveResult.condition_classification.confidence * 100).toFixed(1)}% · wear index {currentLiveResult.condition_classification.wear_index_score.toFixed(1)}</small></div><p>{currentLiveResult.summary_message}</p></>}{currentLiveResult && item.detections.length > 0 ? item.detections.map((d, index) => { const backendDetection = currentLiveResult.detections[index]; return <div className="aa-rule" key={d.id}><div className="aa-rule-head"><strong>{backendDetection?.defect_type ?? d.className}</strong><Badge tone={d.severity === "Critical" || d.severity === "High" ? "failed" : "review"}>{d.severity}</Badge></div><h3>Mechanical Physics Principle</h3><p>{backendDetection?.explanation || explanation.principle}</p><p>Location: {backendDetection?.location || d.region} · Confidence: {(d.confidence * 100).toFixed(1)}% · Area: {backendDetection?.area_percentage.toFixed(2) ?? "0.00"}%</p><p><b>Recommendation:</b> {backendDetection?.recommendation || explanation.suggestedAction}</p></div>; }) : currentLiveResult ? <p className="aa-muted">The backend reported no detected defects for this inspected component.</p> : <><h3>{explanation.defectClass}: what it is</h3><p>{explanation.whatItIs}</p><h3>Mechanical principle</h3><p>{explanation.principle}</p><h3>Possible contributors</h3><ul>{explanation.possibleContributors.map((x) => <li key={x}>{x}</li>)}</ul><h3>Potential effect</h3><p>{explanation.potentialEffect}</p><div className="aa-rule"><div className="aa-rule-head"><strong>Suggested next step</strong><Badge tone="review">Engineering review</Badge></div><p>{explanation.suggestedAction}</p></div></>}{!currentLiveResult && <><div className="aa-caution">General mechanism reference only; it does not confirm root cause or component safety. Demonstration measurements use image-space values only.</div><div className="aa-rule" style={{ marginTop: 16 }}><div className="aa-rule-head"><strong>{engineeringRule.id}</strong><Badge tone="demo">{engineeringRule.version}</Badge></div><p>{engineeringRule.description}</p><ul>{engineeringRule.evidence.map((e) => <li key={e}>{e}</li>)}</ul></div></>}</div> : <div><div className="panel-heading"><div><h2>Mechanical explanation</h2><p>Available for the selected demo record only</p></div></div><div className="aa-caution">The uploaded image has no associated analysis. Load the demo inspection to review curated mechanical context for the selected fixture.</div></div>}</section>
     <ProcessPanel item={item} navigate={navigate}/></div>
     <div className="aa-inspector-bottom"><button className="button button-secondary" onClick={() => { navigate("Batch Quality Analytics"); const url = new URL(window.location.href); url.searchParams.set("batch", item.batchId); window.history.replaceState({}, "", url); }}>View batch analytics</button><button className="button button-primary" onClick={() => navigate("Human Review", item.id)}>Send component to Human Review</button></div>
   </>;
@@ -84,7 +161,7 @@ function Inspector({ inspections, selectedPart, setSelectedPart, navigate }: Pro
 
 function ProcessPanel({ item, navigate }: { item: Inspection; navigate: Props["navigate"] }) {
   const machine = machines.find((m) => m.id === item.machine) ?? machines[3]; const outsideLimit = machine.telemetry.temperatureC > machine.telemetry.referenceLimitC;
-  return <section className="panel aa-process"><div className="panel-heading"><div><h2>Process investigation</h2><p>Evidence linked to component history</p></div></div><div className="aa-machine-highlight"><span className="aa-machine-icon">M</span><span><small>LINKED PROCESS STATION</small><strong>{machine.station}</strong><b>Machine {machine.id} · {item.batchId}</b></span><Badge tone="review">Investigate</Badge></div><div className="aa-telemetry"><span>Observed process temperature <b className={outsideLimit ? "hot" : ""}>{machine.telemetry.temperatureC.toFixed(1)}°C</b></span><span>Demo reference limit <b>{machine.telemetry.referenceLimitC}°C</b></span><span>Pressure <b>{machine.telemetry.pressureBar.toFixed(1)} bar</b></span><span>Vibration <b>{machine.telemetry.vibrationMmS.toFixed(1)} mm/s RMS</b></span><span>Cycle time <b>{machine.telemetry.cycleSeconds} s</b></span></div><div className="aa-process-note"><strong>Potential contributing factor</strong><p>Elevated process temperature at Station 03 may warrant investigation. Cause not yet confirmed; this is process evidence, not a causal finding.</p><span>Evidence status · Demonstration telemetry</span></div><div className="aa-recommendation"><small>RECOMMENDED ACTION</small><p>Inspect Machine M-04 thermal-control readings, validate the relevant process limits, and review affected batches before restarting the next production cycle.</p><button className="text-link" onClick={() => { navigate("Fault Intelligence Board"); const url = new URL(window.location.href); url.searchParams.set("machine", machine.id); window.history.replaceState({}, "", url); }}>Open machine investigation →</button></div></section>;
+  return <section className="panel aa-process"><div className="panel-heading"><div><h2>Process investigation</h2><p>Evidence linked to component history</p></div></div><div className="aa-machine-highlight"><span className="aa-machine-icon">M</span><span><small>LINKED PROCESS STATION</small><strong>{machine.station}</strong><b>Machine {machine.id} · {item.batchId}</b></span><Badge tone="review">Investigate</Badge></div><div className="aa-telemetry"><span>Observed process temperature <b className={outsideLimit ? "hot" : ""}>{machine.telemetry.temperatureC.toFixed(1)}°C</b></span><span>Demo reference limit <b>{machine.telemetry.referenceLimitC}°C</b></span><span>Pressure <b>{machine.telemetry.pressureBar.toFixed(1)} bar</b></span><span>Vibration <b>{machine.telemetry.vibrationMmS.toFixed(1)} mm/s RMS</b></span><span>Cycle time <b>{machine.telemetry.cycleSeconds} s</b></span></div><div className="aa-process-note"><strong>Process context</strong><p>{machine.id === "M-04" ? "Elevated demo temperature at Station 03 may warrant investigation. Cause not confirmed; this is process evidence, not a causal finding." : "No process anomaly is confirmed for this machine in the current demonstration telemetry."}</p><span>Evidence status · Demonstration telemetry</span></div><div className="aa-recommendation"><small>RECOMMENDED ACTION</small><p>Review the linked inspection and machine telemetry with manufacturing engineering; confirm any relevant process limits before disposition.</p><button className="text-link" onClick={() => { navigate("Fault Intelligence Board"); const url = new URL(window.location.href); url.searchParams.set("machine", machine.id); window.history.replaceState({}, "", url); }}>Open machine investigation →</button></div></section>;
 }
 
 function BatchAnalytics({ inspections, navigate, setSelectedPart }: Props) {
@@ -114,7 +191,7 @@ function MachineIntelligence({ inspections, navigate, setSelectedPart }: Props) 
   const chooseMachine = (id: string) => { setMachineId(id); setRecordsPage(1); const url = new URL(window.location.href); url.searchParams.set("machine", id); window.history.replaceState({}, "", url); };
   const associated = inspections.filter((r) => r.machine === machine.id);
   const recordPageSize = 10; const recordPages = Math.max(1, Math.ceil(associated.length / recordPageSize)); const associatedPage = associated.slice((recordsPage - 1) * recordPageSize, recordsPage * recordPageSize);
-  const trends = calculateFaultTrends(inspections, demoBatches).slice(0, 5);
+  const trends = calculateFaultTrends(inspections, demoBatches);
   const trend = trends[0];
   const fastestIncreasing = [...trends].sort((a, b) => b.changePercentPoints - a.changePercentPoints)[0];
   const metricConfig = { temperatureC: ["Temperature", "°C"], pressureBar: ["Pressure", "bar"], vibrationMmS: ["Vibration", "mm/s RMS"], cycleSeconds: ["Cycle time", "s"], rpm: ["Spindle speed", "RPM"] } as const;
