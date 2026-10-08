@@ -42,7 +42,9 @@ class BrakeDiscVisionModel(BaseDefectModel):
 
     @property
     def is_real_model(self) -> bool:
-        return True
+        # This geometry-aware OpenCV fallback is useful for diagnostics, but it
+        # must never be reported to the UI as trained YOLO inference.
+        return False
 
     def predict(
         self,
