@@ -4,14 +4,15 @@ import { useCallback, useEffect, useState } from "react";
 import { AutoAuditView } from "../components/autoaudit/Views";
 import { checkBackendHealth, type InspectApiResponse } from "../lib/api";
 import type { InspectionUploadLog } from "../lib/types";
-import { saveStoredInspection } from "../lib/inspection-store";
+import { getStoredInspectionLogs, saveStoredInspection, saveStoredInspectionLogs } from "../lib/inspection-store";
 
-type ViewName = "AI Inspection Studio" | "Plant Overview" | "Batch Quality Analytics" | "Fault Intelligence Board" | "Human Review";
+type ViewName = "AI Inspection Studio" | "Main Dashboard" | "Inspection History" | "Batch Data" | "Fault Intelligence Board" | "Human Review";
 type IconName = "grid" | "disc" | "box" | "chart";
 const navigation: { label: ViewName; icon: IconName }[] = [
   { label: "AI Inspection Studio", icon: "disc" },
-  { label: "Plant Overview", icon: "grid" },
-  { label: "Batch Quality Analytics", icon: "box" },
+  { label: "Main Dashboard", icon: "grid" },
+  { label: "Inspection History", icon: "box" },
+  { label: "Batch Data", icon: "box" },
   { label: "Fault Intelligence Board", icon: "chart" },
   { label: "Human Review", icon: "chart" },
 ];
@@ -37,10 +38,27 @@ export default function Home() {
 
   useEffect(() => {
     void checkBackendHealth().then(setBackend);
-    try {
-      const savedUploadLogs = window.localStorage.getItem("autoaudit-upload-log-v1");
-      if (savedUploadLogs) { const logs = JSON.parse(savedUploadLogs) as InspectionUploadLog[]; setUploadLogs(logs); const requestedPart = new URL(window.location.href).searchParams.get("part"); if (!requestedPart && logs[0]) setSelectedPart(logs[0].id); }
-    } catch { /* Continue with an empty history if local storage is unavailable. */ }
+    const restoreHistory = async () => {
+      let logs: InspectionUploadLog[] = [];
+      try { logs = await getStoredInspectionLogs(); } catch { /* Migrate history from local storage when IndexedDB is unavailable. */ }
+      if (logs.length === 0) {
+        try {
+          const savedUploadLogs = window.localStorage.getItem("autoaudit-upload-log-v1");
+          const legacyLogs = savedUploadLogs ? JSON.parse(savedUploadLogs) as InspectionUploadLog[] : [];
+          if (Array.isArray(legacyLogs)) logs = legacyLogs;
+          if (logs.length > 0) await saveStoredInspectionLogs(logs);
+        } catch { /* Continue with whatever history could be recovered. */ }
+      }
+      if (logs.length > 0) {
+        setUploadLogs((current) => {
+          const currentIds = new Set(current.map((entry) => entry.id));
+          return [...current, ...logs.filter((entry) => !currentIds.has(entry.id))];
+        });
+        const requestedPart = new URL(window.location.href).searchParams.get("part");
+        if (!requestedPart) setSelectedPart((current) => current || logs[0].id);
+      }
+    };
+    void restoreHistory();
     const url = new URL(window.location.href);
     const view = navigation.find((item) => item.label === url.searchParams.get("view"))?.label;
     if (view) setActive(view);
@@ -95,9 +113,12 @@ export default function Home() {
         fmea: detection.fmea,
       })),
     };
-    const updatedLogs = [uploadLog, ...uploadLogs.filter((entry) => entry.id !== uploadLog.id)].slice(0, 100);
+    const updatedLogs = [uploadLog, ...uploadLogs.filter((entry) => entry.id !== uploadLog.id)];
     setUploadLogs(updatedLogs);
-    try { window.localStorage.setItem("autoaudit-upload-log-v1", JSON.stringify(updatedLogs)); } catch { /* Keep current-session log if browser storage is unavailable. */ }
+    try { await saveStoredInspectionLogs(updatedLogs); } catch {
+      try { window.localStorage.setItem("autoaudit-upload-log-v1", JSON.stringify(updatedLogs)); }
+      catch { setNotice("Inspection saved for this session, but browser history storage is full."); }
+    }
     setSelectedPart(response.image_id);
     const url = new URL(window.location.href); url.searchParams.set("part", response.image_id); window.history.replaceState({}, "", url);
     if (uploadLog.requiresHumanReview) {
@@ -126,7 +147,7 @@ export default function Home() {
 
   return <main className={`app-shell ${active === "AI Inspection Studio" ? "inspection-mode" : ""}`}>
     <aside className="sidebar">
-      <a className="brand" href="?view=Plant%20Overview" onClick={(e) => { e.preventDefault(); navigate("Plant Overview"); }}><span className="brand-mark"><Icon name="disc" size={21}/></span><span className="brand-copy"><strong>autoaudit</strong><small>QUALITY OPERATIONS</small></span></a>
+      <a className="brand" href="?view=Main%20Dashboard" onClick={(e) => { e.preventDefault(); navigate("Main Dashboard"); }}><span className="brand-mark"><Icon name="disc" size={21}/></span><span className="brand-copy"><strong>autoaudit</strong><small>QUALITY OPERATIONS</small></span></a>
       <div className="plant-select"><span className="plant-dot"/><span><b>Inspection workspace</b><small>Live backend results</small></span></div>
       <div className="nav-heading">WORKSPACE</div>
       <nav className="primary-nav" aria-label="Main navigation">{navigation.map((item) => <button key={item.label} className={`nav-link ${active === item.label ? "selected" : ""}`} onClick={() => navigate(item.label)} aria-label={item.label} title={item.label} aria-current={active === item.label ? "page" : undefined}><Icon name={item.icon}/><span>{item.label}</span></button>)}</nav>
