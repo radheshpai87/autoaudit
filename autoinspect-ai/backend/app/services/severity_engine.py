@@ -287,8 +287,19 @@ class SeverityEngine:
 
         # Rule 7: Corrosion or Residual Wash Spots (IN01 - Rule R1-IN from paper)
         if "corrosion" in d_type or "rust" in d_type or "water" in d_type or "oil" in d_type:
-            s, o, d = 4, 2, 5
-            rpn = s * o * d  # 40
+            if area_percentage >= 15.0:
+                s, o, d = 6, 3, 4
+                rank_tier = "Top 6-10 (High)"
+                action = "REWORK / DESCALING. Heavy iron oxidation on friction ring & hub hat. Lathe skim or acid bath required; inspect wash air knife nozzles."
+            elif area_percentage >= 3.0:
+                s, o, d = 5, 2, 5
+                rank_tier = "Top 11-15 (Medium)"
+                action = "CLEAN & RESURFACE. Moderate surface rust coating. Verify drying station heat cycle and clean air knife nozzles."
+            else:
+                s, o, d = 4, 2, 5
+                rank_tier = "Top 11-15 (Medium)"
+                action = "Clean air knife drying nozzles and verify drying heat cycle."
+            rpn = s * o * d
             return FMEAEvaluation(
                 station="Inspection Station",
                 process_code="IN01",
@@ -299,8 +310,8 @@ class SeverityEngine:
                 occurrence_o=o,
                 detection_d=d,
                 rpn=rpn,
-                rpn_rank_tier="Top 11-15 (Medium)",
-                recommended_action="Clean air knife drying nozzles and verify drying heat cycle.",
+                rpn_rank_tier=rank_tier,
+                recommended_action=action,
                 current_control_detection="Visual and optical inspection at final inspection conveyor",
                 associated_quality_defect="Cleanliness & Surface Finish",
             )

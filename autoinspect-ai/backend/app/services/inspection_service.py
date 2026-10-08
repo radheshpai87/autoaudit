@@ -131,6 +131,7 @@ class InspectionService:
         condition_result = BrakeConditionClassifierService.classify_rotor_condition(
             image_bgr,
             has_critical_defects=has_critical,
+            has_high_defects=has_high,
             defect_count=len(detections),
         )
 
