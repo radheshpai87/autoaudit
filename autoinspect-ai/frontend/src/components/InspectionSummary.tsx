@@ -10,6 +10,7 @@ import {
   Wrench,
   FileText,
   Disc,
+  Car,
   Gauge,
   ShieldAlert,
   Sliders,
@@ -43,26 +44,34 @@ export const InspectionSummary: React.FC<InspectionSummaryProps> = ({
     }
   }
 
+  const isBonnet = inspection.component_type === 'car_bonnet' || Boolean(inspection.brake_component_type?.includes('Bonnet'))
+
   const getOverallStatusDisplay = (status: OverallStatus) => {
     switch (status) {
       case 'PASS':
         return {
-          label: 'QA PASS — ROTOR APPROVED',
-          description: 'No cracks, heat checks, or severe grooving detected. Rotor within safe operational tolerance.',
+          label: isBonnet ? 'QA PASS — BONNET CONFORMING' : 'QA PASS — ROTOR APPROVED',
+          description: isBonnet
+            ? 'No draw splits, dents, or hemming burrs detected. Class-A surface geometry conforms to press die specifications.'
+            : 'No cracks, heat checks, or severe grooving detected. Rotor within safe operational tolerance.',
           badgeBg: 'bg-emerald-950/60 border-emerald-500/70 text-emerald-300',
           icon: <CheckCircle2 className="w-8 h-8 text-emerald-400 shrink-0" />,
         }
       case 'REVIEW':
         return {
-          label: 'REQUIRES WORKSHOP REVIEW',
-          description: 'Non-critical scoring or unknown surface anomaly flagged. Measure thickness and check runout.',
+          label: isBonnet ? 'REQUIRES PDR REWORK / DIE CLEANING' : 'REQUIRES WORKSHOP REVIEW',
+          description: isBonnet
+            ? 'Non-critical punch pimple or shallow surface dent detected. PDR or die face cleaning recommended.'
+            : 'Non-critical scoring or unknown surface anomaly flagged. Measure thickness and check runout.',
           badgeBg: 'bg-amber-950/60 border-amber-500/70 text-amber-300',
           icon: <AlertTriangle className="w-8 h-8 text-amber-400 shrink-0" />,
         }
       case 'REJECT':
         return {
-          label: 'QA REJECT — CONDEMN ROTOR',
-          description: 'Critical structural crack or deep thermal damage detected. Rotor must not be re-fitted.',
+          label: isBonnet ? 'QA REJECT — CONDEMN PANEL TO SCRAP' : 'QA REJECT — CONDEMN ROTOR',
+          description: isBonnet
+            ? 'Severe tensile draw split tear or structural fracture detected. Scrap panel and check draw press tonnage.'
+            : 'Critical structural crack or deep thermal damage detected. Rotor must not be re-fitted.',
           badgeBg: 'bg-red-950/60 border-red-500/70 text-red-300',
           icon: <AlertOctagon className="w-8 h-8 text-red-400 shrink-0" />,
         }
@@ -82,8 +91,17 @@ export const InspectionSummary: React.FC<InspectionSummaryProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono tracking-widest text-slate-400 uppercase flex items-center gap-1.5">
-                <Disc className="w-3.5 h-3.5 text-cyan-400" />
-                Brake Rotor QA Status
+                {isBonnet ? (
+                  <>
+                    <Car className="w-3.5 h-3.5 text-indigo-400" />
+                    Stamped Car Bonnet QA Status
+                  </>
+                ) : (
+                  <>
+                    <Disc className="w-3.5 h-3.5 text-cyan-400" />
+                    Brake Rotor QA Status
+                  </>
+                )}
               </span>
               {inspection.inference_mode === 'demo_mock' && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800 font-mono">
@@ -113,7 +131,9 @@ export const InspectionSummary: React.FC<InspectionSummaryProps> = ({
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
               <h3 className="text-xs font-mono font-bold tracking-wider text-cyan-300 uppercase m-0">
-                AI Condition Classifier (Trained 3-Class Brake Model)
+                {isBonnet
+                  ? 'AI Stamping Condition Classifier (Trained 3-Class Bonnet Model)'
+                  : 'AI Condition Classifier (Trained 3-Class Brake Model)'}
               </h3>
             </div>
             <span className="text-[11px] font-mono text-slate-400">
@@ -141,12 +161,19 @@ export const InspectionSummary: React.FC<InspectionSummaryProps> = ({
               <p className="text-[11px] text-slate-400 font-sans">
                 {inspection.condition_classification.triage_verdict}
               </p>
+              {inspection.rework_feasibility && (
+                <div className="mt-2 pt-1.5 border-t border-slate-800/80 text-[10px] font-mono text-cyan-300">
+                  Assessment: <strong>{inspection.rework_feasibility}</strong>
+                </div>
+              )}
             </div>
 
             {/* Wear & Damage Index */}
             <div className="p-4 rounded-lg bg-slate-950/70 border border-slate-800 flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-mono text-slate-400 uppercase">Wear Index</span>
+                <span className="text-[11px] font-mono text-slate-400 uppercase">
+                  {isBonnet ? 'Stamping Damage Index' : 'Wear Index'}
+                </span>
                 <span className="text-xs font-mono font-bold text-slate-200">
                   {inspection.condition_classification.wear_index_score.toFixed(1)} / 100
                 </span>

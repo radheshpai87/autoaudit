@@ -22,6 +22,11 @@ class RotorConditionClass(str, Enum):
     FAULTY = "FAULTY"
 
 
+class ComponentType(str, Enum):
+    BRAKE_ROTOR = "brake_rotor"
+    CAR_BONNET = "car_bonnet"
+
+
 class AnomalyOrigin(str, Enum):
     SURFACE = "surface_level"      # Roll marks, inclusions, oil spots, water stains, surface pits, scratches
     THERMAL = "thermal"            # Thermal fatigue crack, heat checking fissure, cementite hot spot
@@ -149,6 +154,9 @@ class InspectionResponse(BaseModel):
     mask_overlay_base64: Optional[str] = None
     heatmap_overlay_base64: Optional[str] = None
     brake_component_type: str = Field(default="Ventilated Brake Disc Rotor", description="Component classification")
+    component_type: ComponentType = Field(default=ComponentType.BRAKE_ROTOR, description="Inspected component type")
+    panel_die_zone: Optional[str] = Field(default=None, description="Stamping press die zone for sheet metal panels")
+    rework_feasibility: Optional[str] = Field(default=None, description="Reworkability assessment")
 
 
 class HealthResponse(BaseModel):

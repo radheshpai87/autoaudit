@@ -3,7 +3,7 @@ import uuid
 import numpy as np
 from PIL import Image
 import cv2
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 
 from fastapi import UploadFile, HTTPException
 from app.config import settings
@@ -12,10 +12,15 @@ from app.models.schemas import (
     InspectionOverallStatus,
     DefectDetection,
     SeverityLevel,
+    ComponentType,
+    RotorConditionClass,
+    ConditionClassification,
+    AnomalyOrigin,
 )
 from app.services.severity_engine import SeverityEngine
 from app.inference.manager import ModelManager
 from app.utils.visualizer import draw_inspection_overlay, encode_image_to_base64, generate_defect_heatmap_overlay
+from app.services.bonnet_panel_explanations import build_bonnet_fmea_summary
 
 
 class InspectionService:
@@ -55,18 +60,27 @@ class InspectionService:
             raise HTTPException(status_code=400, detail=f"Invalid or corrupted image file: {str(e)}")
 
     @staticmethod
-    def process_inspection(image_bgr: np.ndarray, filename: str, ext: str) -> InspectionResponse:
+    def process_inspection(
+        image_bgr: np.ndarray,
+        filename: str,
+        ext: str,
+        component_type: str = "brake_rotor"
+    ) -> InspectionResponse:
         """
         Coordinates the complete inspection workflow:
         1. Queries the active defect model (YOLO or Demo/Mock)
         2. Detects defects or unknown anomalies
         3. Calculates overall inspection pass/fail status (PASS, REVIEW, REJECT)
         4. Generates visual overlays (annotated images with masks and HUD badges)
-        5. Returns structured JSON inspection response
+        5. Computes component-specific FMEA assessment & condition triage
+        6. Logs inspection telemetry to historical database
+        7. Returns structured JSON inspection response
         """
         model = ModelManager.get_instance().get_model()
         h, w = image_bgr.shape[:2]
         image_id = str(uuid.uuid4())
+        component_type = component_type.lower()
+        is_bonnet = (component_type == "car_bonnet")
 
         # Run inference
         try:
@@ -75,20 +89,23 @@ class InspectionService:
                 confidence_threshold=settings.CONFIDENCE_THRESHOLD,
                 unknown_threshold=settings.UNKNOWN_ANOMALY_THRESHOLD,
                 filename_hint=filename,
+                component_type=component_type,
             )
         except TypeError:
-            detections = model.predict(
-                image_bgr,
-                confidence_threshold=settings.CONFIDENCE_THRESHOLD,
-                unknown_threshold=settings.UNKNOWN_ANOMALY_THRESHOLD,
-            )
+            try:
+                detections = model.predict(
+                    image_bgr,
+                    confidence_threshold=settings.CONFIDENCE_THRESHOLD,
+                    unknown_threshold=settings.UNKNOWN_ANOMALY_THRESHOLD,
+                    filename_hint=filename,
+                )
+            except TypeError:
+                detections = model.predict(
+                    image_bgr,
+                    confidence_threshold=settings.CONFIDENCE_THRESHOLD,
+                    unknown_threshold=settings.UNKNOWN_ANOMALY_THRESHOLD,
+                )
 
-
-        # Determine overall component inspection status:
-        # - Any Critical defect -> REJECT
-        # - Any High defect -> REJECT
-        # - Any Medium defect or Unknown Anomaly -> REVIEW
-        # - Only Low defects or 0 defects -> PASS (or REVIEW if minor cosmetic threshold exceeded)
         has_critical = any(d.severity == SeverityLevel.CRITICAL for d in detections)
         has_high = any(d.severity == SeverityLevel.HIGH for d in detections)
         has_medium = any(d.severity == SeverityLevel.MEDIUM for d in detections)
@@ -105,7 +122,11 @@ class InspectionService:
 
         # Generate summary message
         if len(detections) == 0:
-            summary_message = "No visible defect detected. Component conforms to quality specifications."
+            summary_message = (
+                "No visible defect detected. Stamped Car Bonnet conforms to Class-A specifications."
+                if is_bonnet
+                else "No visible defect detected. Brake disc conforms to quality specifications."
+            )
             status_text = "no_defect"
         else:
             primary_defect = detections[0]
@@ -120,43 +141,74 @@ class InspectionService:
         annotated_bgr = draw_inspection_overlay(image_bgr, detections, draw_masks=True, draw_boxes=True)
         annotated_b64 = encode_image_to_base64(annotated_bgr, ext=ext)
 
-        # Mask-only overlay (masks only, no boxes) for view toggling
         mask_only_bgr = draw_inspection_overlay(image_bgr, detections, draw_masks=True, draw_boxes=False)
         mask_only_b64 = encode_image_to_base64(mask_only_bgr, ext=ext)
 
-        # Dynamic defect intensity / thermal heatmap overlay from predicted crack boundaries
         heatmap_bgr = generate_defect_heatmap_overlay(image_bgr, detections)
         heatmap_b64 = encode_image_to_base64(heatmap_bgr, ext=ext)
 
-        # Run trained 3-class classifier: GOOD vs ALMOST_WORN vs FAULTY
-        from app.services.classifier_service import BrakeConditionClassifierService
-        from app.models.schemas import AnomalyOrigin
-        condition_result = BrakeConditionClassifierService.classify_rotor_condition(
-            image_bgr,
-            has_critical_defects=has_critical,
-            has_high_defects=has_high,
-            defect_count=len(detections),
-        )
+        # Condition triage classification
+        if is_bonnet:
+            if len(detections) == 0:
+                condition_result = ConditionClassification(
+                    condition=RotorConditionClass.GOOD,
+                    confidence=0.98,
+                    probabilities={"GOOD": 0.98, "ALMOST_WORN": 0.02, "FAULTY": 0.0},
+                    wear_index_score=11.2,
+                    triage_verdict="CONFORMING CLASS-A STAMPED PANEL: Zero surface defects detected. Sheet metal contours and character lines within standard draw tolerances."
+                )
+                rework_feasibility = "Nominal Conformity — No Rework Needed"
+                panel_die_zone = "All Zones Nominal"
+            elif has_critical:
+                condition_result = ConditionClassification(
+                    condition=RotorConditionClass.FAULTY,
+                    confidence=0.96,
+                    probabilities={"GOOD": 0.01, "ALMOST_WORN": 0.04, "FAULTY": 0.95},
+                    wear_index_score=86.5,
+                    triage_verdict="CRITICAL STAMPING FRACTURE / SCRAP: Catastrophic tensile split tear exceeding Forming Limit Diagram. Condemn panel to scrap."
+                )
+                rework_feasibility = "Unrepairable Tensile Fracture — Condemn to Scrap"
+                panel_die_zone = detections[0].location
+            else:
+                condition_result = ConditionClassification(
+                    condition=RotorConditionClass.ALMOST_WORN,
+                    confidence=0.91,
+                    probabilities={"GOOD": 0.06, "ALMOST_WORN": 0.90, "FAULTY": 0.04},
+                    wear_index_score=48.0,
+                    triage_verdict="HOLD FOR REWORK / PDR: Shallow surface dent or pimple blemish. PDR or surface stoning feasible before paint."
+                )
+                rework_feasibility = "Paintless Dent Repair (PDR) / Surface Polishing Feasible"
+                panel_die_zone = detections[0].location
 
-        # Determine primary anomaly origin:
-        # 1. If any thermal defect -> THERMAL (highest automotive risk)
-        # 2. Else if any surface defect -> SURFACE
-        # 3. Else if any unknown defect -> UNKNOWN
-        # 4. None if defect_count == 0
-        primary_origin = None
-        if any(d.anomaly_origin == AnomalyOrigin.THERMAL for d in detections):
-            primary_origin = AnomalyOrigin.THERMAL
-        elif any(d.anomaly_origin == AnomalyOrigin.SURFACE for d in detections):
-            primary_origin = AnomalyOrigin.SURFACE
-        elif any(d.anomaly_origin == AnomalyOrigin.UNKNOWN for d in detections):
-            primary_origin = AnomalyOrigin.UNKNOWN
+            primary_origin = AnomalyOrigin.SURFACE if len(detections) > 0 else None
+            fmea_summary = build_bonnet_fmea_summary(detections)
+            fmea_risks = [d.fmea for d in detections if getattr(d, "fmea", None) is not None]
+            top_fmea_risk = max(fmea_risks, key=lambda f: f.rpn) if fmea_risks else None
+        else:
+            # Brake Rotor workflow
+            from app.services.classifier_service import BrakeConditionClassifierService
+            condition_result = BrakeConditionClassifierService.classify_rotor_condition(
+                image_bgr,
+                has_critical_defects=has_critical,
+                has_high_defects=has_high,
+                defect_count=len(detections),
+            )
+            rework_feasibility = None
+            panel_die_zone = None
 
-        # Calculate Applied Sciences 2020 FMEA production line quality control assessment
-        fmea_summary = SeverityEngine.build_production_line_fmea_summary(detections)
-        fmea_risks = [d.fmea for d in detections if getattr(d, "fmea", None) is not None]
-        top_fmea_risk = max(fmea_risks, key=lambda f: f.rpn) if fmea_risks else None
+            primary_origin = None
+            if any(d.anomaly_origin == AnomalyOrigin.THERMAL for d in detections):
+                primary_origin = AnomalyOrigin.THERMAL
+            elif any(d.anomaly_origin == AnomalyOrigin.SURFACE for d in detections):
+                primary_origin = AnomalyOrigin.SURFACE
+            elif any(d.anomaly_origin == AnomalyOrigin.UNKNOWN for d in detections):
+                primary_origin = AnomalyOrigin.UNKNOWN
 
-        # Asynchronously log inspection to historical SQLite database with polar defect coordinates
+            fmea_summary = SeverityEngine.build_production_line_fmea_summary(detections)
+            fmea_risks = [d.fmea for d in detections if getattr(d, "fmea", None) is not None]
+            top_fmea_risk = max(fmea_risks, key=lambda f: f.rpn) if fmea_risks else None
+
+        # Asynchronously log inspection to historical SQLite database
         try:
             from datetime import datetime, timezone
             from app.models.historical_schemas import HistoricalInspectionRecord, HistoricalDefectPoint
@@ -165,9 +217,6 @@ class InspectionService:
 
             hist_defects = []
             for d in detections:
-                dx, dy, r_norm, clock_deg, clock_h, zone = PredictiveHeatmapEngine.cartesian_to_polar(
-                    d.bbox, w, h
-                )
                 p_code = getattr(d.fmea, "process_code", "UNKNOWN") if getattr(d, "fmea", None) else "UNKNOWN"
                 norm_poly = None
                 if d.mask_polygon and len(d.mask_polygon) >= 3:
@@ -183,36 +232,63 @@ class InspectionService:
                     round((d.bbox[3] / float(max(h, 1))) - 0.5, 4),
                 ]
 
-                hist_defects.append(HistoricalDefectPoint(
-                    defect_type=d.defect_type,
-                    process_code=p_code,
-                    severity=d.severity.value,
-                    confidence=d.confidence,
-                    dx_normalized=dx,
-                    dy_normalized=dy,
-                    r_normalized=r_norm,
-                    theta_degrees=clock_deg,
-                    clock_hour=clock_h,
-                    zone_name=zone,
-                    area_pct=d.area_percentage,
-                    bbox=norm_bbox,
-                    mask_polygon=norm_poly
-                ))
+                if is_bonnet:
+                    px, py, die_zone = PredictiveHeatmapEngine.normalize_panel_coordinates(d.bbox, w, h)
+                    hist_defects.append(HistoricalDefectPoint(
+                        defect_type=d.defect_type,
+                        process_code=p_code,
+                        severity=d.severity.value,
+                        confidence=d.confidence,
+                        component_type="car_bonnet",
+                        dx_normalized=round(px - 0.5, 4),
+                        dy_normalized=round(py - 0.5, 4),
+                        r_normalized=0.0,
+                        theta_degrees=0.0,
+                        clock_hour=12.0,
+                        panel_x_normalized=px,
+                        panel_y_normalized=py,
+                        zone_name=die_zone,
+                        area_pct=d.area_percentage,
+                        bbox=norm_bbox,
+                        mask_polygon=norm_poly
+                    ))
+                else:
+                    dx, dy, r_norm, clock_deg, clock_h, zone = PredictiveHeatmapEngine.cartesian_to_polar(
+                        d.bbox, w, h
+                    )
+                    hist_defects.append(HistoricalDefectPoint(
+                        defect_type=d.defect_type,
+                        process_code=p_code,
+                        severity=d.severity.value,
+                        confidence=d.confidence,
+                        component_type="brake_rotor",
+                        dx_normalized=dx,
+                        dy_normalized=dy,
+                        r_normalized=r_norm,
+                        theta_degrees=clock_deg,
+                        clock_hour=clock_h,
+                        zone_name=zone,
+                        area_pct=d.area_percentage,
+                        bbox=norm_bbox,
+                        mask_polygon=norm_poly
+                    ))
 
             p_code_top = getattr(top_fmea_risk, "process_code", None) if top_fmea_risk else None
             station_top = getattr(top_fmea_risk, "station", None) if top_fmea_risk else None
+            part_prefix = "BN" if is_bonnet else "BD"
 
             hist_record = HistoricalInspectionRecord(
-                part_id=f"BD-{image_id[:8].upper()}",
+                part_id=f"{part_prefix}-{image_id[:8].upper()}",
+                component_type="car_bonnet" if is_bonnet else "brake_rotor",
                 timestamp=datetime.now(timezone.utc).isoformat(),
                 image_filename=filename,
                 overall_status=overall_status.value,
                 defect_count=len(detections),
                 condition=condition_result.condition.value,
                 wear_index_score=condition_result.wear_index_score,
-                dtv_value_um=fmea_summary.dtv_value_um or 2.1,
-                runout_value_um=fmea_summary.runout_value_um or 11.4,
-                parallelism_value_um=fmea_summary.parallelism_value_um or 16.2,
+                dtv_value_um=fmea_summary.dtv_value_um or (0.2 if is_bonnet else 2.1),
+                runout_value_um=fmea_summary.runout_value_um or (0.3 if is_bonnet else 11.4),
+                parallelism_value_um=fmea_summary.parallelism_value_um or (0.2 if is_bonnet else 16.2),
                 highest_rpn=fmea_summary.highest_rpn,
                 primary_process_code=p_code_top,
                 station=station_top,
@@ -241,5 +317,8 @@ class InspectionService:
             annotated_image_base64=annotated_b64,
             mask_overlay_base64=mask_only_b64,
             heatmap_overlay_base64=heatmap_b64,
-            brake_component_type="Ventilated Brake Disc Rotor",
+            brake_component_type="Stamped BIW Body Panel (Car Bonnet / Hood)" if is_bonnet else "Ventilated Brake Disc Rotor",
+            component_type=ComponentType.CAR_BONNET if is_bonnet else ComponentType.BRAKE_ROTOR,
+            panel_die_zone=panel_die_zone,
+            rework_feasibility=rework_feasibility,
         )

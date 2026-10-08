@@ -21,6 +21,9 @@ class BaseDefectModel(ABC):
         image_np: np.ndarray,
         confidence_threshold: float = 0.35,
         unknown_threshold: float = 0.55,
+        filename_hint: str = "",
+        component_type: str = "brake_rotor",
+        **kwargs,
     ) -> List[DefectDetection]:
         """
         Runs inference on an RGB/BGR numpy image.

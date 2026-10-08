@@ -6,6 +6,8 @@ export type RotorCondition = 'GOOD' | 'ALMOST_WORN' | 'FAULTY'
 
 export type AnomalyOrigin = 'surface_level' | 'thermal' | 'unknown'
 
+export type ComponentType = 'brake_rotor' | 'car_bonnet'
+
 export interface ConditionClassification {
   condition: RotorCondition
   confidence: number
@@ -82,6 +84,9 @@ export interface InspectionResponse {
   mask_overlay_base64?: string
   heatmap_overlay_base64?: string
   brake_component_type?: string
+  component_type?: ComponentType
+  panel_die_zone?: string | null
+  rework_feasibility?: string | null
 }
 
 export interface HealthResponse {
@@ -96,6 +101,7 @@ export interface HealthResponse {
 export interface MachineSignatureWarning {
   machine_code: string
   station: string
+  component_type?: string
   failure_mode: string
   potential_causes: string
   confidence: number
@@ -113,6 +119,10 @@ export interface HeatmapBin {
   r_bin: number
   theta_bin: number
   clock_hour: number
+  panel_x?: number | null
+  panel_y?: number | null
+  die_zone?: string | null
+  component_type?: string
   intensity: number
   defect_count: number
   top_process_code: string
@@ -125,6 +135,7 @@ export interface HeatmapBin {
 export interface MachineHeatmapData {
   machine_code: string
   station: string
+  component_type?: string
   total_samples: number
   total_defects: number
   bins: HeatmapBin[]
@@ -135,6 +146,7 @@ export interface MachineHeatmapData {
 export interface HistoricalInspectionItem {
   id?: number
   part_id: string
+  component_type?: ComponentType | string
   timestamp: string
   image_filename: string
   overall_status: string
@@ -157,13 +169,18 @@ export interface HistoricalInspectionItem {
     r_normalized: number
     theta_degrees: number
     clock_hour?: number
+    panel_x_normalized?: number | null
+    panel_y_normalized?: number | null
     zone_name?: string
     area_pct: number
     bbox: number[]
+    mask_polygon?: number[][] | null
   }[]
 }
 
 export interface HistoricalAnalyticsResponse {
+  component_type: ComponentType | string
+  supported_components?: string[]
   total_inspections: number
   pass_rate: number
   reject_rate: number
@@ -189,4 +206,3 @@ export interface HistoricalAnalyticsResponse {
   latest_conveyor_status?: string
   collection_status_message?: string
 }
-
