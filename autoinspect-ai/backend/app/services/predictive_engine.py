@@ -123,8 +123,10 @@ class PredictiveHeatmapEngine:
                 active_early_warnings=[],
                 machine_heatmaps=cls._empty_heatmaps(),
                 time_series=[],
+                latest_inspection_record=None,
                 latest_inspected_defect=None,
                 latest_machine_code=None,
+                latest_conveyor_status="No conveyor parts inspected yet. Start scanning on line.",
                 collection_status_message="No inspection records logged yet. Upload or test a brake disc in HUD Inspection mode to begin logging real-time telemetry."
             )
 
@@ -139,17 +141,36 @@ class PredictiveHeatmapEngine:
         # Extract all defect points
         machine_defects: Dict[str, List[HistoricalDefectPoint]] = defaultdict(list)
         all_defects: List[HistoricalDefectPoint] = []
+
+        # Real conveyor belt synchronization:
+        # records[0] is the current/latest part that just passed under the camera
+        latest_record = records[0] if records else None
         latest_defect: Optional[HistoricalDefectPoint] = None
         latest_machine: Optional[str] = None
+        latest_conveyor_status = ""
+
+        if latest_record:
+            if latest_record.defect_count == 0:
+                latest_conveyor_status = (
+                    f"Conveyor Line Active: Part {latest_record.part_id} PASSED (0 Defects, Wear Index {latest_record.wear_index_score}/100). "
+                    "Component is clean and conforming — zero heat signature added."
+                )
+                latest_defect = None
+                latest_machine = None
+            else:
+                if latest_record.defects:
+                    latest_defect = latest_record.defects[0]
+                    latest_machine = latest_defect.process_code
+                    latest_conveyor_status = (
+                        f"Conveyor Line Alert: Part {latest_record.part_id} REJECTED ({latest_record.defect_count} Defect(s)). "
+                        f"Plotted '{latest_defect.defect_type}' at {latest_defect.clock_hour}h on Station {latest_defect.process_code}."
+                    )
 
         for r in records:
             for d in r.defects:
                 code = d.process_code or "UNKNOWN"
                 machine_defects[code].append(d)
                 all_defects.append(d)
-                if latest_defect is None:
-                    latest_defect = d
-                    latest_machine = code
 
         # Build Heatmap structure per machine
         target_codes = ["CR01", "PU01", "DT16", "DT17", "BA02", "IN01"]
@@ -228,8 +249,10 @@ class PredictiveHeatmapEngine:
             active_early_warnings=active_warnings,
             machine_heatmaps=machine_heatmaps,
             time_series=time_series,
+            latest_inspection_record=latest_record,
             latest_inspected_defect=latest_defect,
             latest_machine_code=latest_machine or (records[0].primary_process_code if records else None),
+            latest_conveyor_status=latest_conveyor_status,
             collection_status_message=status_msg
         )
 

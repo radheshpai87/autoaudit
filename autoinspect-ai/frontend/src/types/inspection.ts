@@ -179,8 +179,10 @@ export interface HistoricalAnalyticsResponse {
     process_code: string
     wear_index: number
   }[]
+  latest_inspection_record?: HistoricalInspectionItem | null
   latest_inspected_defect?: any
   latest_machine_code?: string | null
+  latest_conveyor_status?: string
   collection_status_message?: string
 }
 

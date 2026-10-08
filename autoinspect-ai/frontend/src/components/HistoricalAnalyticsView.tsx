@@ -11,6 +11,7 @@ import {
   PlusCircle,
   Clock,
   Target,
+  CheckCircle2,
 } from 'lucide-react'
 
 interface HistoricalAnalyticsViewProps {
@@ -26,6 +27,7 @@ export const HistoricalAnalyticsView: React.FC<HistoricalAnalyticsViewProps> = (
 }) => {
   const [selectedMachine, setSelectedMachine] = useState<string>('CR01')
   const [activeTab, setActiveTab] = useState<'heatmap' | 'trends' | 'log'>('heatmap')
+  const [heatmapMode, setHeatmapMode] = useState<'cumulative' | 'current_part'>('cumulative')
   const [isSimulating, setIsSimulating] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
 
@@ -198,6 +200,70 @@ export const HistoricalAnalyticsView: React.FC<HistoricalAnalyticsViewProps> = (
         </div>
       </div>
 
+      {/* Live Conveyor Belt Stream */}
+      {analytics.records && analytics.records.length > 0 && (
+        <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 pb-2.5 border-b border-slate-800/80">
+            <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-cyan-300">
+              <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+              Conveyor Line Real-Time Parts Stream
+            </div>
+            <span className="text-[11px] font-mono text-slate-400">
+              {analytics.latest_conveyor_status || 'Parts moving sequentially through inspection camera'}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-thin">
+            {analytics.records.slice(0, 10).map((rec, idx) => (
+              <div
+                key={idx}
+                className={`shrink-0 p-2.5 rounded-lg border font-mono text-xs flex flex-col gap-1 min-w-[175px] transition-all ${
+                  idx === 0
+                    ? rec.overall_status === 'PASS'
+                      ? 'bg-emerald-950/30 border-emerald-500 shadow-md shadow-emerald-950/50'
+                      : 'bg-red-950/30 border-red-500 shadow-md shadow-red-950/50'
+                    : 'bg-slate-950/60 border-slate-800 text-slate-400'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-200">{rec.part_id}</span>
+                  <span
+                    className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                      rec.overall_status === 'PASS'
+                        ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                        : rec.overall_status === 'REJECT'
+                        ? 'bg-red-950 text-red-300 border border-red-800'
+                        : 'bg-amber-950 text-amber-300 border border-amber-800'
+                    }`}
+                  >
+                    {rec.overall_status}
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-400 flex items-center justify-between">
+                  <span>{rec.defect_count} flaw{rec.defect_count === 1 ? '' : 's'}</span>
+                  <span>Wear: {rec.wear_index_score.toFixed(1)}</span>
+                </div>
+                {idx === 0 ? (
+                  <span
+                    className={`text-[9px] px-1 py-0.5 rounded text-center font-bold ${
+                      rec.overall_status === 'PASS'
+                        ? 'bg-emerald-900/80 text-emerald-200'
+                        : 'bg-red-900/80 text-red-200'
+                    }`}
+                  >
+                    ON CONVEYOR NOW (LATEST)
+                  </span>
+                ) : (
+                  <span className="text-[9px] text-slate-600 text-center font-mono">
+                    Part #{analytics.total_inspections - idx}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* 2. Active Early Machine Failure Warning Banner (Appears ONLY when >= 3 defects cluster) */}
       {analytics.active_early_warnings.length > 0 && (
         <div className="flex flex-col gap-3">
@@ -317,7 +383,7 @@ export const HistoricalAnalyticsView: React.FC<HistoricalAnalyticsViewProps> = (
 
           {/* Polar Defect Spatial Heatmap Canvas (Interactive SVG) */}
           <div className="lg:col-span-8 flex flex-col items-center justify-center p-4 rounded-xl bg-slate-950/80 border border-slate-800/90 relative">
-            <div className="w-full flex items-center justify-between pb-3 border-b border-slate-800/80">
+            <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-slate-800/80 gap-3">
               <div className="flex items-center gap-2">
                 <Flame className="w-4 h-4 text-orange-400" />
                 <span className="text-sm font-bold font-mono text-white">
@@ -325,27 +391,63 @@ export const HistoricalAnalyticsView: React.FC<HistoricalAnalyticsViewProps> = (
                 </span>
                 <span className="text-xs text-slate-400">({currentHeatmap?.station})</span>
               </div>
-              <span className="text-xs font-mono text-slate-400">
-                Clock-Face Rotor Projection (12h, 3h, 6h, 9h)
-              </span>
+
+              {/* View Toggle: Fleet Shift Cumulative vs Current Conveyor Disc */}
+              <div className="flex rounded-lg bg-slate-900 border border-slate-800 p-0.5 text-xs font-mono">
+                <button
+                  onClick={() => setHeatmapMode('cumulative')}
+                  className={`px-2.5 py-1 rounded transition-colors ${
+                    heatmapMode === 'cumulative'
+                      ? 'bg-orange-950 text-orange-300 font-bold border border-orange-700/60'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Shift Fleet Heatmap ({currentHeatmap?.total_defects || 0} Flaws)
+                </button>
+                <button
+                  onClick={() => setHeatmapMode('current_part')}
+                  className={`px-2.5 py-1 rounded transition-colors ${
+                    heatmapMode === 'current_part'
+                      ? 'bg-cyan-950 text-cyan-300 font-bold border border-cyan-700/60'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Current Conveyor Part ({analytics.latest_inspection_record?.defect_count ?? 0} Flaws)
+                </button>
+              </div>
             </div>
 
-            {/* Latest Inspected Defect Callout */}
-            {analytics.latest_inspected_defect && (
-              <div className="w-full mt-3 p-2.5 rounded-lg bg-indigo-950/40 border border-indigo-800/70 flex flex-wrap items-center justify-between text-xs font-mono gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-                  <span className="text-cyan-300 font-semibold">Latest Uploaded Defect:</span>
-                  <span className="text-white font-bold">{analytics.latest_inspected_defect.defect_type}</span>
+            {/* Real-time Conveyor Belt Part Callout */}
+            {analytics.latest_inspection_record ? (
+              analytics.latest_inspection_record.defect_count === 0 ? (
+                <div className="w-full mt-3 p-3 rounded-lg bg-emerald-950/40 border border-emerald-700/70 flex flex-wrap items-center justify-between text-xs font-mono gap-2">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span className="text-emerald-300 font-bold">Current Conveyor Part {analytics.latest_inspection_record.part_id}:</span>
+                    <span className="text-white font-semibold">QA PASS — 0 Defects Detected</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-slate-300">
+                    <span>Wear Index: <strong className="text-emerald-400">{analytics.latest_inspection_record.wear_index_score.toFixed(1)} / 100</strong></span>
+                    <span className="text-slate-600">|</span>
+                    <span className="text-slate-400">Conforming OEM Disc (Zero Heatmap Footprint)</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-slate-300">
-                  <Clock className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Clock Position: <strong className="text-amber-300">{analytics.latest_inspected_defect.clock_hour} o'clock</strong></span>
-                  <span className="text-slate-500">|</span>
-                  <span className="text-slate-400">{analytics.latest_inspected_defect.zone_name}</span>
+              ) : (
+                <div className="w-full mt-3 p-3 rounded-lg bg-red-950/40 border border-red-700/70 flex flex-wrap items-center justify-between text-xs font-mono gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-400 animate-ping"></span>
+                    <span className="text-red-300 font-bold">Current Conveyor Part {analytics.latest_inspection_record.part_id}:</span>
+                    <span className="text-white font-bold">{analytics.latest_inspected_defect?.defect_type || 'Defect'} Detected</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Clock Position: <strong className="text-amber-300">{analytics.latest_inspected_defect?.clock_hour || 'N/A'} o'clock</strong></span>
+                    <span className="text-slate-600">|</span>
+                    <span className="text-slate-400">{analytics.latest_inspected_defect?.zone_name || 'Swept Band'}</span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )
+            ) : null}
 
             <div className="my-6 relative flex items-center justify-center">
               {/* SVG Polar Rotor Map */}
@@ -400,37 +502,51 @@ export const HistoricalAnalyticsView: React.FC<HistoricalAnalyticsViewProps> = (
                 <text x="168" y="340" fill="#94a3b8" fontSize="10" fontFamily="monospace">6h</text>
                 <text x="16" y="184" fill="#94a3b8" fontSize="10" fontFamily="monospace">9h</text>
 
-                {/* Render Actual Defect Points Plotted on Rotor Geometry */}
-                {currentHeatmap?.bins.map((bin, idx) => {
-                  const { x, y } = cartesianToSvg(bin.dx, bin.dy)
-                  return (
-                    <g key={idx} filter="url(#glow)">
-                      <circle
-                        cx={x}
-                        cy={y}
-                        r="12"
-                        fill="#ef4444"
-                        opacity="0.8"
-                      />
-                      <circle cx={x} cy={y} r="4" fill="#ffffff" stroke="#b91c1c" strokeWidth="1.5" />
-                      <text
-                        x={x + 10}
-                        y={y - 8}
-                        fill="#f8fafc"
-                        fontSize="9"
-                        fontFamily="monospace"
-                        fontWeight="bold"
-                      >
-                        {bin.clock_hour}h
+                {/* Render points according to active mode */}
+                {heatmapMode === 'current_part' ? (
+                  analytics.latest_inspection_record?.defect_count === 0 ? (
+                    <g>
+                      <circle cx="180" cy="180" r="132" fill="none" stroke="#10b981" strokeWidth="2" opacity="0.7" strokeDasharray="4 3" />
+                      <text x="180" y="174" textAnchor="middle" fill="#34d399" fontSize="12" fontFamily="monospace" fontWeight="bold">
+                        CURRENT PART: 0 DEFECTS
+                      </text>
+                      <text x="180" y="194" textAnchor="middle" fill="#94a3b8" fontSize="10" fontFamily="monospace">
+                        Conforming Surface • No Anomaly Points
                       </text>
                     </g>
+                  ) : (
+                    analytics.latest_inspection_record?.defects.map((d, idx) => {
+                      const { x, y } = cartesianToSvg(d.dx_normalized ?? 0, d.dy_normalized ?? 0)
+                      return (
+                        <g key={idx} filter="url(#glow)">
+                          <circle cx={x} cy={y} r="12" fill="#ef4444" opacity="0.8" />
+                          <circle cx={x} cy={y} r="4" fill="#ffffff" stroke="#b91c1c" strokeWidth="1.5" />
+                          <text x={x + 10} y={y - 8} fill="#f8fafc" fontSize="9" fontFamily="monospace" fontWeight="bold">
+                            {d.clock_hour}h
+                          </text>
+                        </g>
+                      )
+                    })
                   )
-                })}
+                ) : (
+                  currentHeatmap?.bins.map((bin, idx) => {
+                    const { x, y } = cartesianToSvg(bin.dx, bin.dy)
+                    return (
+                      <g key={idx} filter="url(#glow)">
+                        <circle cx={x} cy={y} r="12" fill="#ef4444" opacity="0.8" />
+                        <circle cx={x} cy={y} r="4" fill="#ffffff" stroke="#b91c1c" strokeWidth="1.5" />
+                        <text x={x + 10} y={y - 8} fill="#f8fafc" fontSize="9" fontFamily="monospace" fontWeight="bold">
+                          {bin.clock_hour}h
+                        </text>
+                      </g>
+                    )
+                  })
+                )}
 
-                {/* Zero defects placeholder graphic */}
-                {(!currentHeatmap || currentHeatmap.bins.length === 0) && (
-                  <text x="125" y="184" fill="#64748b" fontSize="11" fontFamily="monospace">
-                    No flaws for {selectedMachine}
+                {/* Zero defects placeholder graphic in cumulative mode */}
+                {heatmapMode === 'cumulative' && (!currentHeatmap || currentHeatmap.bins.length === 0) && (
+                  <text x="180" y="184" textAnchor="middle" fill="#64748b" fontSize="11" fontFamily="monospace">
+                    No cumulative flaws for {selectedMachine}
                   </text>
                 )}
               </svg>

@@ -80,6 +80,8 @@ class HistoricalAnalyticsResponse(BaseModel):
     active_early_warnings: List[MachineSignatureWarning]
     machine_heatmaps: Dict[str, MachineHeatmapData]
     time_series: List[Dict[str, Any]]
+    latest_inspection_record: Optional[HistoricalInspectionRecord] = None
     latest_inspected_defect: Optional[HistoricalDefectPoint] = None
     latest_machine_code: Optional[str] = None
+    latest_conveyor_status: str = ""
     collection_status_message: str = ""
