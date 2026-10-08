@@ -4,16 +4,17 @@ import { useCallback, useEffect, useState } from "react";
 import { AutoAuditView } from "../components/autoaudit/Views";
 import { seedInspections } from "../lib/mock-data";
 import { autoAuditApi, checkBackendHealth, type InspectApiResponse } from "../lib/api";
-import type { AuditLog, InspectorReview, Inspection } from "../lib/types";
+import type { AuditLog, InspectionUploadLog, InspectorReview, Inspection } from "../lib/types";
 
-type ViewName = "Plant Overview" | "AI Inspection Studio" | "Batch Quality Analytics" | "Fault Intelligence Board" | "Human Review";
-type IconName = "grid" | "disc" | "box" | "chart" | "activity";
+type ViewName = "Plant Overview" | "AI Inspection Studio" | "Batch Quality Analytics" | "Fault Intelligence Board" | "Human Review" | "Inspection Log";
+type IconName = "grid" | "disc" | "box" | "chart" | "activity" | "log";
 const navigation: { label: ViewName; icon: IconName }[] = [
   { label: "Plant Overview", icon: "grid" },
   { label: "AI Inspection Studio", icon: "disc" },
   { label: "Batch Quality Analytics", icon: "box" },
   { label: "Fault Intelligence Board", icon: "chart" },
   { label: "Human Review", icon: "activity" },
+  { label: "Inspection Log", icon: "log" },
 ];
 
 function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
@@ -23,6 +24,7 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
     box: <><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 8 9 5 9-5m-18 0v9l9 5 9-5V8m-9 5v9"/></>,
     chart: <><path d="M3 3v18h18"/><path d="m7 14 4-4 4 3 6-7"/></>,
     activity: <><path d="M3 12h4l3-8 4 16 3-8h4"/></>,
+    log: <><path d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M14 3v5h5M8 12h8m-8 4h8"/></>,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
@@ -30,6 +32,7 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
 export default function Home() {
   const [active, setActive] = useState<ViewName>("Plant Overview");
   const [inspections, setInspections] = useState<Inspection[]>(seedInspections);
+  const [uploadLogs, setUploadLogs] = useState<InspectionUploadLog[]>([]);
   const [selectedPart, setSelectedPart] = useState("BD-1047");
   const [clock, setClock] = useState("");
   const [notice, setNotice] = useState("");
@@ -44,6 +47,8 @@ export default function Home() {
     try {
       const saved = window.localStorage.getItem("autoaudit-inspections-v2");
       if (saved) setInspections(JSON.parse(saved) as Inspection[]);
+      const savedUploadLogs = window.localStorage.getItem("autoaudit-upload-log-v1");
+      if (savedUploadLogs) setUploadLogs(JSON.parse(savedUploadLogs) as InspectionUploadLog[]);
     } catch { /* Keep the bundled demo fixtures if local storage is unavailable. */ }
     const url = new URL(window.location.href);
     const view = navigation.find((item) => item.label === url.searchParams.get("view"))?.label;
@@ -67,6 +72,34 @@ export default function Home() {
     const updated = [row, ...inspections.filter((entry) => entry.id !== row.id)];
     setInspections(updated);
     try { window.localStorage.setItem("autoaudit-inspections-v2", JSON.stringify(updated)); } catch { /* Keep this inspection in current-session state. */ }
+    const uploadLog: InspectionUploadLog = {
+      id: response.image_id,
+      fileName: row.model,
+      uploadedAt: new Date().toISOString(),
+      component: response.brake_component_type || "Brake component",
+      result: response.overall_status,
+      condition: response.condition_classification.condition,
+      conditionConfidence: response.condition_classification.confidence,
+      wearIndex: response.condition_classification.wear_index_score,
+      defectCount: response.defect_count,
+      inferenceMode: response.inference_mode,
+      modelName: response.model_name,
+      summary: response.summary_message,
+      detections: response.detections.map((detection) => ({
+        defectType: detection.defect_type,
+        confidence: detection.confidence,
+        severity: detection.severity,
+        bbox: detection.bbox,
+        areaPercentage: detection.area_percentage,
+        location: detection.location,
+        explanation: detection.explanation,
+        recommendation: detection.recommendation,
+        maskPolygon: detection.mask_polygon ?? undefined,
+      })),
+    };
+    const updatedLogs = [uploadLog, ...uploadLogs.filter((entry) => entry.id !== uploadLog.id)].slice(0, 100);
+    setUploadLogs(updatedLogs);
+    try { window.localStorage.setItem("autoaudit-upload-log-v1", JSON.stringify(updatedLogs)); } catch { /* Keep current-session log if browser storage is unavailable. */ }
     setSelectedPart(row.id);
     const url = new URL(window.location.href); url.searchParams.set("part", row.id); window.history.replaceState({}, "", url);
     if (response.condition_classification.condition === "FAULTY" || response.overall_status === "REJECT") {
@@ -75,7 +108,7 @@ export default function Home() {
       setQualityAlert(`Inspection ${response.image_id}: ${finding} flagged · disposition ${response.overall_status}. Review the returned findings; no machine cause was identified.`);
       window.setTimeout(() => setQualityAlert(""), 12_000);
     }
-  }, [inspections]);
+  }, [inspections, uploadLogs]);
 
   const selectPart = useCallback((id: string) => {
     setSelectedPart(id);
@@ -106,11 +139,11 @@ export default function Home() {
       <div className="sidebar-bottom"><div className="support-card"><div className="support-icon"><Icon name="activity" size={17}/></div><div><strong>Demo workspace</strong><span>Mock provider connected</span></div><span className="online-dot"/></div><div className="user-card"><div className="avatar">AR</div><div className="user-meta"><b>Alex Rivera</b><span>Quality manager</span></div><span className="user-role">DEMO</span></div></div>
     </aside>
     <section className="content-area">
-      <header className="topbar"><div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><b>{active}</b></div><div className="top-actions"><span className="aa-top-demo">{backend?.isOnline ? (backend.mode === "real_ai" ? "REAL YOLO AI" : "BACKEND · MOCK") : "DEMO DATA"}</span><button className="button button-secondary small-button" onClick={() => { if (window.confirm("Reset local demo reviews and audit history?")) { setInspections(seedInspections); window.localStorage.removeItem("autoaudit-inspections-v2"); window.localStorage.removeItem("autoaudit-audit-log-v2"); setNotice("Local demo reviews and audit history reset."); window.setTimeout(() => setNotice(""), 4500); } }}>Reset demo</button><button className="icon-button notification-button" aria-label="Show data-source details" onClick={() => { setNotice(backend?.isOnline ? `FastAPI backend online · ${backend.mode}` : "Backend offline. Local demonstration fixtures remain available."); window.setTimeout(() => setNotice(""), 4500); }}>ⓘ</button><div className="top-divider"/><div className="top-date"><span className="date-label">{clock ? clock.split(", ").slice(0, 2).join(", ").toUpperCase() : "LOCAL PLANT TIME"}</span><b>{clock ? clock.split(", ").at(-1) : "--:--"} <span>IST</span></b></div></div></header>
+      <header className="topbar"><div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><b>{active}</b></div><div className="top-actions"><span className="aa-top-demo">{backend?.isOnline ? (backend.mode === "real_ai" ? "REAL YOLO AI" : "BACKEND · MOCK") : "DEMO DATA"}</span><button className="button button-secondary small-button" onClick={() => { if (window.confirm("Reset local demo reviews and audit history? Uploaded image history will stay in the Inspection Log.")) { setInspections(seedInspections); window.localStorage.removeItem("autoaudit-inspections-v2"); window.localStorage.removeItem("autoaudit-audit-log-v2"); setNotice("Local demo reviews and audit history reset. Upload history was kept."); window.setTimeout(() => setNotice(""), 4500); } }}>Reset demo</button><button className="icon-button notification-button" aria-label="Show data-source details" onClick={() => { setNotice(backend?.isOnline ? `FastAPI backend online · ${backend.mode}` : "Backend offline. Local demonstration fixtures remain available."); window.setTimeout(() => setNotice(""), 4500); }}>ⓘ</button><div className="top-divider"/><div className="top-date"><span className="date-label">{clock ? clock.split(", ").slice(0, 2).join(", ").toUpperCase() : "LOCAL PLANT TIME"}</span><b>{clock ? clock.split(", ").at(-1) : "--:--"} <span>IST</span></b></div></div></header>
       {backend && !backend.isOnline && <div className="aa-backend-warning" role="status"><span>Backend offline on :8000 — operating in local demonstration mode</span><button className="button button-secondary small-button" onClick={() => { setBackend(null); void checkBackendHealth().then(setBackend); }}>Retry connection</button></div>}
       {qualityAlert && <div className="aa-quality-alert" role="alert"><b>{qualityAlert}</b><button aria-label="Dismiss critical defect alert" onClick={() => setQualityAlert("")}>×</button></div>}
-      <div className="page-content"><AutoAuditView view={active} inspections={inspections} selectedPart={selectedPart} setSelectedPart={selectPart} navigate={navigate} saveReview={saveReview} backendOnline={backend?.isOnline ?? false} inferenceMode={backend?.mode ?? "offline"} onInspectionCreated={addLiveInspection}/><footer className="page-footer"><span>AutoAudit <span>·</span> Manufacturing quality, in focus</span><span>{backend?.isOnline ? "LIVE INSPECTION · DEMO OPERATIONS DATA" : "LOCAL DEMONSTRATION DATA · NOT FOR PRODUCTION DISPOSITION"}</span></footer></div>
+      <div className="page-content"><div className={active === "AI Inspection Studio" ? "" : "aa-persistent-inspector-hidden"}><AutoAuditView view="AI Inspection Studio" inspections={inspections} uploadLogs={uploadLogs} selectedPart={selectedPart} setSelectedPart={selectPart} navigate={navigate} saveReview={saveReview} backendOnline={backend?.isOnline ?? false} inferenceMode={backend?.mode ?? "offline"} onInspectionCreated={addLiveInspection}/></div>{active !== "AI Inspection Studio" && <AutoAuditView view={active} inspections={inspections} uploadLogs={uploadLogs} selectedPart={selectedPart} setSelectedPart={selectPart} navigate={navigate} saveReview={saveReview} backendOnline={backend?.isOnline ?? false} inferenceMode={backend?.mode ?? "offline"} onInspectionCreated={addLiveInspection}/>}<footer className="page-footer"><span>AutoAudit <span>·</span> Manufacturing quality, in focus</span><span>{backend?.isOnline ? "LIVE INSPECTION · DEMO OPERATIONS DATA" : "LOCAL DEMONSTRATION DATA · NOT FOR PRODUCTION DISPOSITION"}</span></footer></div>
     </section>
-    {notice && <div className="toast"><span className="toast-check">i</span>{notice}</div>}
-  </main>;
+      {notice && <div className="toast"><span className="toast-check">i</span>{notice}</div>}
+    </main>;
 }
