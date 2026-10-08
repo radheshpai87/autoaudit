@@ -13,7 +13,14 @@ function fmeaFailure(fmea: FMEAEvaluation) { return fmea.potential_failure_mode 
 function fmeaStation(fmea: FMEAEvaluation) { return fmea.station ?? fmea.station_origin ?? "Station not supplied"; }
 function fmeaTier(fmea: FMEAEvaluation) { return fmea.rpn_rank_tier ?? fmea.priority_tier ?? "Priority unavailable"; }
 function fmeaAction(fmea: FMEAEvaluation) { return fmea.recommended_action ?? fmea.station_action ?? "No corrective action supplied"; }
-function needsHumanReview(entry: InspectionUploadLog) { return entry.requiresHumanReview === true || entry.detections.some((item) => /unknown anomaly/i.test(item.defectType) || Boolean(item.fmea && item.confidence < 0.5) || item.confidence < 0.5); }
+function isHighRiskFmea(fmea: FMEAEvaluation) {
+  const tier = `${fmea.rpn_rank_tier ?? ""} ${fmea.priority_tier ?? ""}`.toLowerCase();
+  return /critical|high|priority\s*[12]|top\s*(1-5|6-10)/.test(tier);
+}
+function needsHumanReview(entry: InspectionUploadLog) {
+  const highRisk = Boolean(entry.topFmeaRisk && isHighRiskFmea(entry.topFmeaRisk)) || entry.detections.some((item) => Boolean(item.fmea && isHighRiskFmea(item.fmea))) || /priority\s*[12]|critical|high/i.test(entry.fmeaQualityControl?.rpn_priority_tier ?? "") || /reject|stop line/i.test(entry.fmeaQualityControl?.line_decision ?? "");
+  return highRisk || entry.requiresHumanReview === true || entry.detections.some((item) => /unknown anomaly/i.test(item.defectType) || item.confidence < 0.5);
+}
 function fmeaTone(fmea: FMEAEvaluation) { const tier = fmeaTier(fmea).toLowerCase(); return tier.includes("critical") || tier.includes("priority 1") || tier.includes("top 1-5") ? "reject" : tier.includes("high") || tier.includes("priority 2") || tier.includes("top 6-10") ? "review" : "neutral"; }
 
 function Badge({ children, tone = "neutral" }: { children: React.ReactNode; tone?: string }) { return <span className={`aa-badge ${tone}`}>{children}</span>; }
@@ -210,7 +217,7 @@ function Inspector({ uploadLogs, selectedPart, setSelectedPart, navigate, backen
 
 function HumanReview({ uploadLogs, navigate }: Props) {
   const queued = uploadLogs.filter(needsHumanReview);
-  return <><Header eyebrow="HUMAN REVIEW QUEUE" title="Human Review Workspace" subtitle="Low-confidence and unclassified detections held for expert evaluation" action={<Badge tone="review">{queued.length} quarantined</Badge>}/>{queued.length ? <UploadHistory uploadLogs={queued} navigate={navigate} title="Quarantined Components"/> : <section className="panel aa-manager-empty"><h2>No anomalies awaiting review</h2><p>Unclassified findings and detections below 50% confidence are automatically added here.</p><button className="button button-secondary" onClick={() => navigate("AI Inspection Studio")}>Return to AI Inspection Studio</button></section>}</>;
+  return <><Header eyebrow="HUMAN REVIEW QUEUE" title="Human Review Workspace" subtitle="High-priority risks, low-confidence results, and unclassified detections" action={<Badge tone="review">{queued.length} for review</Badge>}/>{queued.length ? <UploadHistory uploadLogs={queued} navigate={navigate} title="Inspections Requiring Review"/> : <section className="panel aa-manager-empty"><h2>No inspections awaiting review</h2><p>Critical or high FMEA tiers, unclassified findings, and detections below 50% confidence are added here.</p><button className="button button-secondary" onClick={() => navigate("AI Inspection Studio")}>Return to AI Inspection Studio</button></section>}</>;
 }
 
 function BatchData({ uploadLogs, navigate }: Props) {
