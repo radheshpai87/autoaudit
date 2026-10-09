@@ -55,7 +55,7 @@ class InspectionService:
             raise HTTPException(status_code=400, detail=f"Invalid or corrupted image file: {str(e)}")
 
     @staticmethod
-    def process_inspection(image_bgr: np.ndarray, filename: str, ext: str) -> InspectionResponse:
+    def process_inspection(image_bgr: np.ndarray, filename: str, ext: str, batch_id: str | None = None) -> InspectionResponse:
         """
         Coordinates the complete inspection workflow:
         1. Queries the active defect model (YOLO or Demo/Mock)
@@ -128,6 +128,27 @@ class InspectionService:
         heatmap_bgr = generate_defect_heatmap_overlay(image_bgr, detections)
         heatmap_b64 = encode_image_to_base64(heatmap_bgr, ext=ext)
 
+        # Persist the source and rendered inspection artifacts privately when
+        # S3 is configured. The API still includes its existing base64 overlays
+        # for compatibility with the live inspection studio.
+        from app.services.storage_service import storage_service
+        s3_keys = {}
+        try:
+            artifacts = {}
+            for name, image in (("raw", image_bgr), ("annotated", annotated_bgr), ("heatmap", heatmap_bgr)):
+                ok, encoded = cv2.imencode(ext, image)
+                if ok:
+                    artifacts[name] = encoded.tobytes()
+            s3_keys = storage_service.upload_artifacts(image_id, ext, artifacts)
+        except Exception:
+            import logging
+            logging.getLogger("autoinspect.storage").exception(
+                "Could not store inspection artifacts for %s; returning inline images", image_id
+            )
+        raw_image_url = storage_service.get_presigned_url(s3_keys.get("raw"))
+        annotated_image_url = storage_service.get_presigned_url(s3_keys.get("annotated"))
+        heatmap_image_url = storage_service.get_presigned_url(s3_keys.get("heatmap"))
+
         # Run trained 3-class classifier: GOOD vs ALMOST_WORN vs FAULTY
         from app.services.classifier_service import BrakeConditionClassifierService
         from app.models.schemas import AnomalyOrigin
@@ -155,6 +176,11 @@ class InspectionService:
         fmea_summary = SeverityEngine.build_production_line_fmea_summary(detections)
         fmea_risks = [d.fmea for d in detections if getattr(d, "fmea", None) is not None]
         top_fmea_risk = max(fmea_risks, key=lambda f: f.rpn) if fmea_risks else None
+        review_required = bool(
+            has_critical or has_high or has_unknown
+            or any(d.confidence < 0.5 for d in detections)
+            or (top_fmea_risk is not None and top_fmea_risk.rpn >= 200)
+        )
 
         # Asynchronously log inspection to historical SQLite database with polar defect coordinates
         try:
@@ -218,6 +244,16 @@ class InspectionService:
                 highest_rpn=fmea_summary.highest_rpn,
                 primary_process_code=p_code_top,
                 station=station_top,
+                batch_id=(batch_id.strip()[:80] if batch_id and batch_id.strip() else None),
+                inference_mode="real_ai" if model.is_real_model else "demo_mock",
+                model_name=model.model_name,
+                top_failure_mode=(getattr(top_fmea_risk, "failure_mode", None) or getattr(top_fmea_risk, "potential_failure_mode", None)) if top_fmea_risk else None,
+                recommended_action=(getattr(top_fmea_risk, "recommended_action", None) or getattr(top_fmea_risk, "station_action", None)) if top_fmea_risk else None,
+                review_required=review_required,
+                review_status="pending" if review_required else "not_required",
+                raw_s3_key=s3_keys.get("raw"),
+                annotated_s3_key=s3_keys.get("annotated"),
+                heatmap_s3_key=s3_keys.get("heatmap"),
                 defects=hist_defects
             )
             HistoricalDatabaseManager.log_inspection(hist_record)
@@ -227,6 +263,7 @@ class InspectionService:
 
         return InspectionResponse(
             image_id=image_id,
+            batch_id=(batch_id.strip()[:80] if batch_id and batch_id.strip() else None),
             status=status_text,
             overall_status=overall_status,
             defect_count=len(detections),
@@ -243,5 +280,8 @@ class InspectionService:
             annotated_image_base64=annotated_b64,
             mask_overlay_base64=mask_only_b64,
             heatmap_overlay_base64=heatmap_b64,
+            raw_image_url=raw_image_url,
+            annotated_image_url=annotated_image_url,
+            heatmap_image_url=heatmap_image_url,
             brake_component_type="Ventilated Brake Disc Rotor",
         )

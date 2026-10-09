@@ -14,6 +14,10 @@ services:
       - YOLO_WEIGHTS_PATH=weights/best.pt
       - CONFIDENCE_THRESHOLD=0.35
       - UNKNOWN_ANOMALY_THRESHOLD=0.55
+      - DATABASE_URL=${DATABASE_URL:-}
+      - AWS_REGION=${AWS_REGION:-}
+      - AWS_S3_BUCKET_NAME=${AWS_S3_BUCKET_NAME:-}
+      - AWS_S3_PRESIGNED_URL_TTL=${AWS_S3_PRESIGNED_URL_TTL:-3600}
 
   frontend:
     build:

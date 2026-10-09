@@ -120,6 +120,7 @@ class DefectDetection(BaseModel):
 
 class InspectionResponse(BaseModel):
     image_id: str
+    batch_id: Optional[str] = None
     status: Literal["completed", "failed", "no_defect"] = "completed"
     overall_status: InspectionOverallStatus
     defect_count: int
@@ -148,6 +149,9 @@ class InspectionResponse(BaseModel):
     annotated_image_base64: Optional[str] = None
     mask_overlay_base64: Optional[str] = None
     heatmap_overlay_base64: Optional[str] = None
+    raw_image_url: Optional[str] = None
+    annotated_image_url: Optional[str] = None
+    heatmap_image_url: Optional[str] = None
     brake_component_type: str = Field(default="Ventilated Brake Disc Rotor", description="Component classification")
 
 

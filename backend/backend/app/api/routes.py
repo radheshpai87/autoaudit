@@ -1,5 +1,6 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Query
 from app.models.schemas import InspectionResponse, HealthResponse
+from app.models.historical_schemas import HumanReviewUpdate
 from app.services.inspection_service import InspectionService
 from app.inference.manager import ModelManager
 from app.config import settings
@@ -22,7 +23,7 @@ def get_health():
 
 
 @router.post("/inspect", response_model=InspectionResponse)
-async def inspect_component(image: UploadFile = File(...)):
+async def inspect_component(image: UploadFile = File(...), batch_id: str | None = Form(default=None, max_length=80)):
     """
     POST /api/inspect
     Accepts an automotive component image (JPG, JPEG, PNG),
@@ -31,7 +32,7 @@ async def inspect_component(image: UploadFile = File(...)):
     and returns detected defects with annotated base64 overlays.
     """
     image_bgr, ext = await InspectionService.validate_and_read_image(image)
-    result = InspectionService.process_inspection(image_bgr, image.filename or "part.jpg", ext)
+    result = InspectionService.process_inspection(image_bgr, image.filename or "part.jpg", ext, batch_id)
     return result
 
 
@@ -77,13 +78,41 @@ def get_historical_analytics(limit: int = 100):
 
 
 @router.get("/history")
-def get_inspection_history(limit: int = 50):
+def get_inspection_history(
+    limit: int = Query(default=50, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
+    batch_id: str | None = None,
+    review_status: str | None = None,
+):
     """
     GET /api/history
     Returns recent historical inspection records with polar coordinates.
     """
     from app.services.historical_db import HistoricalDatabaseManager
-    return HistoricalDatabaseManager.get_recent_inspections(limit=limit)
+    records = HistoricalDatabaseManager.get_recent_inspections(
+        limit=limit, offset=offset, batch_id=batch_id, review_status=review_status
+    )
+    return records
+
+
+@router.get("/dashboard")
+def get_dashboard_analytics():
+    from app.services.historical_db import HistoricalDatabaseManager
+    return HistoricalDatabaseManager.get_dashboard_analytics()
+
+
+@router.get("/batches")
+def get_batches():
+    from app.services.historical_db import HistoricalDatabaseManager
+    return HistoricalDatabaseManager.get_batch_summaries()
+
+
+@router.post("/history/{part_id}/review")
+def review_inspection(part_id: str, payload: HumanReviewUpdate):
+    from app.services.historical_db import HistoricalDatabaseManager
+    if not HistoricalDatabaseManager.update_review(part_id, payload.status, payload.reviewer.strip(), payload.notes):
+        raise HTTPException(status_code=404, detail="Inspection record not found")
+    return {"success": True, "part_id": part_id, "status": payload.status}
 
 
 @router.post("/analytics/simulate")
@@ -107,4 +136,3 @@ def reset_historical_data():
     from app.services.predictive_engine import PredictiveHeatmapEngine
     HistoricalDatabaseManager.clear_all_records()
     return PredictiveHeatmapEngine.generate_analytics_and_heatmaps()
-

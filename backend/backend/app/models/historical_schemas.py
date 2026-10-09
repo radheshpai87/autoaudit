@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any, Tuple
+from typing import List, Optional, Dict, Any, Tuple, Literal
 
 
 class HistoricalDefectPoint(BaseModel):
@@ -35,6 +35,22 @@ class HistoricalInspectionRecord(BaseModel):
     highest_rpn: int
     primary_process_code: Optional[str] = None
     station: Optional[str] = None
+    batch_id: Optional[str] = None
+    inference_mode: str = "demo_mock"
+    model_name: str = "Unknown model"
+    top_failure_mode: Optional[str] = None
+    recommended_action: Optional[str] = None
+    review_required: bool = False
+    review_status: Literal["pending", "approved", "rejected", "not_required"] = "not_required"
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[str] = None
+    review_notes: Optional[str] = None
+    raw_s3_key: Optional[str] = Field(default=None, exclude=True)
+    annotated_s3_key: Optional[str] = Field(default=None, exclude=True)
+    heatmap_s3_key: Optional[str] = Field(default=None, exclude=True)
+    raw_image_url: Optional[str] = None
+    annotated_image_url: Optional[str] = None
+    heatmap_image_url: Optional[str] = None
     defects: List[HistoricalDefectPoint] = Field(default_factory=list)
 
 
@@ -94,3 +110,34 @@ class HistoricalAnalyticsResponse(BaseModel):
     latest_machine_code: Optional[str] = None
     latest_conveyor_status: str = ""
     collection_status_message: str = ""
+
+
+class DashboardAnalyticsResponse(BaseModel):
+    total_inspections: int
+    passed_count: int
+    review_count: int
+    rejected_count: int
+    real_ai_count: int
+    total_defects: int
+    defect_breakdown: List[Dict[str, Any]]
+    station_ranking: List[Dict[str, Any]]
+    batch_trend: List[Dict[str, Any]]
+
+
+class BatchSummary(BaseModel):
+    batch_id: str
+    total_parts: int
+    defect_parts: int
+    defect_count: int
+    pass_count: int
+    review_count: int
+    reject_count: int
+    defect_rate: float
+    yield_rate: float
+    latest_inspection: str
+
+
+class HumanReviewUpdate(BaseModel):
+    status: Literal["approved", "rejected", "pending"]
+    reviewer: str = Field(min_length=1, max_length=120)
+    notes: Optional[str] = Field(default=None, max_length=2000)

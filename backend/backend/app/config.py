@@ -36,6 +36,14 @@ class Settings(BaseSettings):
     # YOLO model weights path
     YOLO_WEIGHTS_PATH: Optional[str] = "weights/best.pt"
 
+    # Persistence and object storage. If DATABASE_URL is omitted, history stays
+    # in the existing local SQLite database. AWS credentials are resolved by
+    # boto3's standard chain (local profile, environment, or workload IAM role).
+    DATABASE_URL: Optional[str] = None
+    AWS_REGION: Optional[str] = None
+    AWS_S3_BUCKET_NAME: Optional[str] = None
+    AWS_S3_PRESIGNED_URL_TTL: int = 3600
+
     # Detection thresholds
     CONFIDENCE_THRESHOLD: float = 0.35
     UNKNOWN_ANOMALY_THRESHOLD: float = 0.55  # If anomaly score is high but class confidence is below this, classify as "unknown anomaly"
