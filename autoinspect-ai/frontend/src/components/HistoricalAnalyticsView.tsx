@@ -358,10 +358,32 @@ export const HistoricalAnalyticsView: React.FC<HistoricalAnalyticsViewProps> = (
           <div className="text-2xl font-bold font-mono text-amber-400">{(analytics.review_rate + analytics.reject_rate).toFixed(1)}%</div>
           <span className="text-[10px] text-amber-500/80 font-mono">Defect Present / Out-of-Spec</span>
         </div>
-        <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-          <span className="text-[11px] font-mono text-slate-400 uppercase block mb-1">Early Press / Line Alerts</span>
-          <div className="text-2xl font-bold font-mono text-rose-400">{analytics.active_early_warnings.length}</div>
-          <span className="text-[10px] text-rose-500/80 font-mono">Recurrent Failure Clusters</span>
+        <div className={`p-4 rounded-xl border ${
+          analytics.active_early_warnings.some((w) => w.severity_level === 'critical')
+            ? 'bg-rose-950/40 border-rose-800'
+            : 'bg-slate-900/80 border-slate-800'
+        }`}>
+          <span className="text-[11px] font-mono text-slate-400 uppercase block mb-1">
+            {analytics.active_early_warnings.some((w) => w.severity_level === 'critical')
+              ? 'Critical Machine Alerts'
+              : isBonnet ? 'Early Press Line Alerts' : 'Early Machine Alerts'}
+          </span>
+          <div className={`text-2xl font-bold font-mono ${
+            analytics.active_early_warnings.some((w) => w.severity_level === 'critical')
+              ? 'text-rose-400 animate-pulse'
+              : 'text-amber-400'
+          }`}>
+            {analytics.active_early_warnings.length}
+          </div>
+          <span className={`text-[10px] font-mono ${
+            analytics.active_early_warnings.some((w) => w.severity_level === 'critical')
+              ? 'text-rose-400 font-bold'
+              : 'text-amber-500/80'
+          }`}>
+            {analytics.active_early_warnings.some((w) => w.severity_level === 'critical')
+              ? 'Immediate Line Action Needed'
+              : 'Recurrent Failure Clusters'}
+          </span>
         </div>
       </div>
 
@@ -454,28 +476,52 @@ export const HistoricalAnalyticsView: React.FC<HistoricalAnalyticsViewProps> = (
       {/* 2. Active Early Machine Failure Warning Banner */}
       {analytics.active_early_warnings.length > 0 && (
         <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">
-            <AlertTriangle className="w-4 h-4 text-amber-400 animate-pulse" />
-            <span>Recurrent Failure Signatures Detected ({analytics.active_early_warnings.length} Active):</span>
+          <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider">
+            {analytics.active_early_warnings.some((w) => w.severity_level === 'critical') ? (
+              <>
+                <AlertTriangle className="w-4 h-4 text-rose-500 animate-pulse" />
+                <span className="text-rose-400">
+                  CRITICAL MACHINE FAILURES DETECTED ({analytics.active_early_warnings.filter((w) => w.severity_level === 'critical').length} CRITICAL / {analytics.active_early_warnings.length} TOTAL ACTIVE):
+                </span>
+              </>
+            ) : (
+              <>
+                <AlertTriangle className="w-4 h-4 text-amber-400 animate-pulse" />
+                <span className="text-amber-400">
+                  RECURRENT FAILURE SIGNATURES DETECTED ({analytics.active_early_warnings.length} ACTIVE):
+                </span>
+              </>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {analytics.active_early_warnings.map((warn, i) => (
               <div
                 key={i}
-                className={`p-4 rounded-xl border flex flex-col justify-between gap-3 ${
+                className={`p-4 rounded-xl border flex flex-col justify-between gap-3 shadow-lg ${
                   warn.severity_level === 'critical'
-                    ? 'bg-red-950/40 border-red-800/80 text-red-200'
+                    ? 'bg-rose-950/50 border-rose-700 text-rose-100 shadow-rose-950/50'
                     : 'bg-amber-950/40 border-amber-800/80 text-amber-200'
                 }`}
               >
                 <div>
-                  <div className="flex items-center justify-between pb-2 border-b border-amber-800/40">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded font-mono font-bold text-xs bg-black/40 border border-current">
+                  <div className={`flex items-center justify-between pb-2 border-b ${
+                    warn.severity_level === 'critical' ? 'border-rose-800/70' : 'border-amber-800/40'
+                  }`}>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`px-2 py-0.5 rounded font-mono font-bold text-xs bg-black/40 border ${
+                        warn.severity_level === 'critical' ? 'border-rose-500 text-rose-300' : 'border-amber-500 text-amber-300'
+                      }`}>
                         STATION: {warn.machine_code}
                       </span>
                       <span className="text-xs font-semibold">{warn.station}</span>
+                      <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded uppercase tracking-wide ${
+                        warn.severity_level === 'critical'
+                          ? 'bg-rose-900/90 text-rose-100 border border-rose-500 animate-pulse'
+                          : 'bg-amber-900/90 text-amber-200 border border-amber-600'
+                      }`}>
+                        {warn.severity_level === 'critical' ? 'CRITICAL SHUTDOWN' : 'EARLY WARNING'}
+                      </span>
                     </div>
                     <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-black/50">
                       Confidence: {(warn.confidence * 100).toFixed(0)}%
@@ -493,8 +539,12 @@ export const HistoricalAnalyticsView: React.FC<HistoricalAnalyticsViewProps> = (
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-amber-800/40 text-[11px] font-sans flex items-start gap-1.5 text-amber-300">
-                  <ArrowUpRight className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                <div className={`pt-2 border-t text-[11px] font-sans flex items-start gap-1.5 ${
+                  warn.severity_level === 'critical' ? 'border-rose-800/70 text-rose-300' : 'border-amber-800/40 text-amber-300'
+                }`}>
+                  <ArrowUpRight className={`w-4 h-4 shrink-0 mt-0.5 ${
+                    warn.severity_level === 'critical' ? 'text-rose-400' : 'text-amber-400'
+                  }`} />
                   <div>
                     <strong className="font-semibold text-white">Preventive Action: </strong>
                     {warn.recommended_action}
@@ -519,7 +569,9 @@ export const HistoricalAnalyticsView: React.FC<HistoricalAnalyticsViewProps> = (
               {machineList.map((mCode) => {
                 const hData = analytics.machine_heatmaps[mCode]
                 const isSelected = selectedMachine === mCode
-                const hasWarning = analytics.active_early_warnings.some((w) => w.machine_code === mCode)
+                const machineWarn = analytics.active_early_warnings.find((w) => w.machine_code === mCode)
+                const isCritical = machineWarn?.severity_level === 'critical'
+                const hasWarning = !!machineWarn
                 const isLatest = analytics.latest_machine_code === mCode
 
                 return (
@@ -528,13 +580,19 @@ export const HistoricalAnalyticsView: React.FC<HistoricalAnalyticsViewProps> = (
                     onClick={() => setSelectedMachine(mCode)}
                     className={`p-3 rounded-lg border text-left transition-all flex items-center justify-between ${
                       isSelected
-                        ? 'bg-cyan-950/70 border-cyan-600 text-white shadow-md shadow-cyan-900/20'
+                        ? isCritical
+                          ? 'bg-rose-950/70 border-rose-500 text-white shadow-md shadow-rose-900/30'
+                          : 'bg-cyan-950/70 border-cyan-600 text-white shadow-md shadow-cyan-900/20'
+                        : isCritical
+                        ? 'bg-rose-950/20 border-rose-900/80 text-rose-200 hover:bg-rose-950/30'
                         : 'bg-slate-950/60 border-slate-800/80 text-slate-300 hover:bg-slate-900'
                     }`}
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-sm text-cyan-400">{mCode}</span>
+                        <span className={`font-mono font-bold text-sm ${isCritical ? 'text-rose-400' : 'text-cyan-400'}`}>
+                          {mCode}
+                        </span>
                         <span className="text-xs text-slate-300 font-medium">{hData.station}</span>
                         {isLatest && (
                           <span className="text-[9px] px-1 rounded bg-blue-900 text-blue-200 border border-blue-700 font-mono">
@@ -552,8 +610,14 @@ export const HistoricalAnalyticsView: React.FC<HistoricalAnalyticsViewProps> = (
                         {hData.total_defects} flaw{hData.total_defects === 1 ? '' : 's'}
                       </span>
                       {hasWarning && (
-                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-800 font-mono font-bold animate-pulse">
-                          EARLY WARNING
+                        <span
+                          className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold animate-pulse ${
+                            isCritical
+                              ? 'bg-rose-950 text-rose-200 border border-rose-600 shadow-sm shadow-rose-950'
+                              : 'bg-amber-950 text-amber-300 border border-amber-800'
+                          }`}
+                        >
+                          {isCritical ? 'CRITICAL ALERT' : 'EARLY WARNING'}
                         </span>
                       )}
                     </div>
