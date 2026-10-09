@@ -1,17 +1,14 @@
 {
-  "ServiceName": "autoaudit-frontend",
+  "ServiceName": "autoaudit-whatsapp",
   "SourceConfiguration": {
     "ImageRepository": {
-      "ImageIdentifier": "956966433293.dkr.ecr.ap-south-1.amazonaws.com/autoaudit-frontend:v1.0.2",
+      "ImageIdentifier": "956966433293.dkr.ecr.ap-south-1.amazonaws.com/autoaudit-whatsapp:v1.0.0",
       "ImageConfiguration": {
-        "Port": "3000",
+        "Port": "3001",
         "RuntimeEnvironmentVariables": {
           "NODE_ENV": "production",
-          "PORT": "3000",
-          "HOSTNAME": "0.0.0.0",
-          "AUTOINSPECT_API_URL": "https://tmwidm6b9y.ap-south-1.awsapprunner.com",
-          "NEXT_PUBLIC_BACKEND_URL": "https://tmwidm6b9y.ap-south-1.awsapprunner.com",
-          "WHATSAPP_SERVICE_URL": "http://13.206.223.9:3001",
+          "WHATSAPP_PORT": "3001",
+          "WHATSAPP_HOST": "0.0.0.0",
           "WHATSAPP_SERVICE_TOKEN": "autoaudit-secret-whatsapp-token"
         }
       },
@@ -23,14 +20,14 @@
     "AutoDeploymentsEnabled": false
   },
   "InstanceConfiguration": {
-    "Cpu": "1 vCPU",
-    "Memory": "2 GB"
+    "Cpu": "0.25 vCPU",
+    "Memory": "0.5 GB"
   },
   "HealthCheckConfiguration": {
     "Protocol": "HTTP",
-    "Path": "/api/health",
+    "Path": "/status",
     "Interval": 10,
-    "Timeout": 10,
+    "Timeout": 5,
     "HealthyThreshold": 1,
     "UnhealthyThreshold": 5
   }

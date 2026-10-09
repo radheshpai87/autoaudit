@@ -1,0 +1,50 @@
+{
+  "family": "autoaudit-whatsapp",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::956966433293:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "whatsapp",
+      "image": "956966433293.dkr.ecr.ap-south-1.amazonaws.com/autoaudit-whatsapp:v1.0.0",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 3001,
+          "hostPort": 3001,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        },
+        {
+          "name": "WHATSAPP_PORT",
+          "value": "3001"
+        },
+        {
+          "name": "WHATSAPP_HOST",
+          "value": "0.0.0.0"
+        },
+        {
+          "name": "WHATSAPP_SERVICE_TOKEN",
+          "value": "autoaudit-secret-whatsapp-token"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/autoaudit-whatsapp",
+          "awslogs-region": "ap-south-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
