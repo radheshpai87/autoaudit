@@ -48,6 +48,8 @@ The platform unites an **Executive Quality Operations Dashboard** (Next.js 15, R
 
 ## 🏗️ System Architecture
 
+![AutoAudit End-to-End System Architecture](docs/assets/system-architecture.png)
+
 ```mermaid
 flowchart TD
     subgraph Client ["Client Layer"]
