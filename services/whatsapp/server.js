@@ -31,6 +31,7 @@ const PORT = Number(process.env.WHATSAPP_PORT || 3001);
 const TOKEN = process.env.WHATSAPP_SERVICE_TOKEN || "";
 const EXPECTED_SENDER = String(process.env.WHATSAPP_EXPECTED_SENDER || "").replace(/\D/g, "");
 const AUTH_DIR = path.join(__dirname, "auth_baileys");
+const DISPATCH_STORE = path.join(__dirname, "dispatch_store.json");
 const DEFAULT_DIRECTORY = {
   "ST-02": { name: "Thermal Quenching Lead", phone: "", station: "ST-02 Induction Hardening" },
   "ST-04": { name: "Grinding & Lathe Lead", phone: "", station: "ST-04 Finish Lathe & Grinding" },
@@ -64,6 +65,21 @@ let isConnected = false;
 let senderMatchesExpected = null;
 let starting = false;
 let loggedOut = false;
+let dispatchRecords = {};
+const activeDispatchKeys = new Set();
+
+try {
+  dispatchRecords = JSON.parse(fs.readFileSync(DISPATCH_STORE, "utf8"));
+  if (!dispatchRecords || typeof dispatchRecords !== "object" || Array.isArray(dispatchRecords)) dispatchRecords = {};
+} catch (error) {
+  if (error.code !== "ENOENT") console.error("Could not read WhatsApp dispatch store:", error.message);
+}
+
+function saveDispatchRecords() {
+  const temporaryPath = `${DISPATCH_STORE}.tmp`;
+  fs.writeFileSync(temporaryPath, JSON.stringify(dispatchRecords, null, 2), { mode: 0o600 });
+  fs.renameSync(temporaryPath, DISPATCH_STORE);
+}
 
 function authorized(req, res, next) {
   if (!TOKEN) return res.status(503).json({ error: "WhatsApp service token is not configured." });
@@ -122,7 +138,7 @@ app.get("/status", authorized, (_req, res) => {
 });
 
 app.post("/send-alert", authorized, async (req, res) => {
-  const { phone, stationKey, station, failureMode, rpn, probability, action, partId } = req.body || {};
+  const { phone, stationKey, station, failureMode, rpn, probability, action, partId, dispatchKey, automatic } = req.body || {};
   if (!sock || !isConnected) return res.status(503).json({ error: "WhatsApp is not linked. Pair it with the QR code or use the manual WhatsApp fallback." });
   if (typeof stationKey !== "string" || !DIRECTORY[stationKey]) return res.status(400).json({ error: "Choose a configured maintenance station." });
   const recipient = DIRECTORY[stationKey];
@@ -130,6 +146,24 @@ app.post("/send-alert", authorized, async (req, res) => {
   if (!/^\d{8,15}$/.test(targetPhone)) return res.status(400).json({ error: "Enter a valid international phone number (8–15 digits)." });
   if (recipient.phone && targetPhone !== recipient.phone) return res.status(403).json({ error: "This dispatch is restricted to the configured maintenance number." });
   if (typeof action !== "string" || !action.trim()) return res.status(400).json({ error: "A corrective action is required." });
+
+  const stableDispatchKey = typeof dispatchKey === "string" && dispatchKey.trim() ? dispatchKey.trim().slice(0, 240) : crypto.randomUUID();
+  const existingDispatch = dispatchRecords[stableDispatchKey];
+  if (existingDispatch?.status === "sent") {
+    return res.json({ success: true, duplicate: true, dispatchId: existingDispatch.dispatchId, sentAt: existingDispatch.sentAt, recipientName: existingDispatch.recipientName, messageStatus: "accepted_by_whatsapp" });
+  }
+  if (existingDispatch?.status === "pending" || activeDispatchKeys.has(stableDispatchKey)) {
+    return res.status(409).json({ error: "This alert is already being submitted. Check the dispatch status before retrying." });
+  }
+
+  const dispatchId = existingDispatch?.dispatchId || crypto.randomUUID();
+  const attemptedAt = new Date().toISOString();
+  dispatchRecords[stableDispatchKey] = { dispatchId, dispatchKey: stableDispatchKey, status: "pending", sentAt: null, recipientName: recipient.name, targetPhone, station: safeText(station, recipient.station || stationKey, 120), failureMode: safeText(failureMode, "Inspection risk flagged", 160), partId: safeText(partId, "INSP-LIVE", 100), automatic: automatic === true, attemptedAt };
+  activeDispatchKeys.add(stableDispatchKey);
+  try { saveDispatchRecords(); } catch (error) {
+    activeDispatchKeys.delete(stableDispatchKey);
+    return res.status(500).json({ error: `Could not record dispatch before sending: ${safeText(error.message, "storage error", 160)}` });
+  }
 
   const timestamp = new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "medium", timeZone: "Asia/Kolkata" }).format(new Date());
   const message = [
@@ -146,15 +180,22 @@ app.post("/send-alert", authorized, async (req, res) => {
     "",
     `*Inspection ID:* ${safeText(partId, "INSP-LIVE", 100)}`,
     `*Time (IST):* ${timestamp}`,
-    "_Sent by AutoAudit after manager confirmation._",
+    automatic === true ? "_Automatically dispatched by AutoAudit from a configured risk trigger._" : "_Sent by AutoAudit after manager confirmation._",
   ].join("\n");
 
   try {
     const jid = `${targetPhone}@s.whatsapp.net`;
     await sock.sendMessage(jid, { text: message });
-    res.json({ success: true, deliveredTo: jid, recipientName: recipient.name, dispatchId: crypto.randomUUID() });
+    const sentAt = new Date().toISOString();
+    dispatchRecords[stableDispatchKey] = { ...dispatchRecords[stableDispatchKey], status: "sent", sentAt, whatsappMessageStatus: "accepted_by_whatsapp" };
+    try { saveDispatchRecords(); } catch (error) { console.error("WhatsApp accepted a message but its sent state could not be persisted:", error.message); }
+    res.json({ success: true, deliveredTo: jid, recipientName: recipient.name, dispatchId, sentAt, messageStatus: "accepted_by_whatsapp" });
   } catch (error) {
+    dispatchRecords[stableDispatchKey] = { ...dispatchRecords[stableDispatchKey], status: "failed", error: safeText(error.message, "unknown error", 180) };
+    try { saveDispatchRecords(); } catch (storeError) { console.error("Could not persist failed WhatsApp dispatch:", storeError.message); }
     res.status(502).json({ error: `WhatsApp could not accept the dispatch: ${safeText(error.message, "unknown error", 180)}` });
+  } finally {
+    activeDispatchKeys.delete(stableDispatchKey);
   }
 });
 

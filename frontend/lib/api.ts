@@ -236,13 +236,15 @@ export async function dispatchWhatsAppAlert(payload: {
   probability?: string;
   action: string;
   partId?: string;
-}): Promise<{ success: boolean; error?: string; recipientName?: string; dispatchId?: string }> {
+  dispatchKey?: string;
+  automatic?: boolean;
+}): Promise<{ success: boolean; duplicate?: boolean; error?: string; recipientName?: string; dispatchId?: string; sentAt?: string }> {
   const response = await fetch("/api/whatsapp/send-alert", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
   });
-  const body = await response.json() as { success?: boolean; error?: string; recipientName?: string; dispatchId?: string };
+  const body = await response.json() as { success?: boolean; duplicate?: boolean; error?: string; recipientName?: string; dispatchId?: string; sentAt?: string };
   if (!response.ok) return { success: false, error: body.error ?? `Dispatch failed (${response.status})` };
-  return { success: body.success === true, error: body.error, recipientName: body.recipientName, dispatchId: body.dispatchId };
+  return { success: body.success === true, duplicate: body.duplicate, error: body.error, recipientName: body.recipientName, dispatchId: body.dispatchId, sentAt: body.sentAt };
 }

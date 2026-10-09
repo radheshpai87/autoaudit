@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { dispatchWhatsAppAlert, fetchWhatsAppStatus, type WhatsAppDirectoryEntry, type WhatsAppStatusResponse } from "../../lib/api";
+import { recordWhatsAppDispatch } from "../../lib/dispatch-log";
 
 type DispatchDetails = {
   station: string;
@@ -11,6 +12,7 @@ type DispatchDetails = {
   probability?: string;
   action: string;
   partId?: string;
+  dispatchKey?: string;
 };
 
 function stationKeyFor(station: string) {
@@ -72,16 +74,11 @@ export function WhatsAppDispatchAction({ details, thresholdLabel }: { details: D
   const send = async () => {
     setBusy(true); setMessage(""); setSuccess("");
     try {
-      const result = await dispatchWhatsAppAlert({ phone, stationKey, station: details.station, failureMode: details.failureMode, rpn: details.rpn, probability: details.probability, action: details.action, partId: details.partId });
+      const result = await dispatchWhatsAppAlert({ phone, stationKey, station: details.station, failureMode: details.failureMode, rpn: details.rpn, probability: details.probability, action: details.action, partId: details.partId, dispatchKey: details.dispatchKey });
       if (!result.success) throw new Error(result.error || "WhatsApp dispatch failed.");
-      const logEntry = { id: result.dispatchId || `dispatch-${Date.now()}`, sentAt: new Date().toISOString(), recipient: result.recipientName || selectedRecipient?.name || "Maintenance", station: details.station || selectedRecipient?.station || "Station not supplied", partId: details.partId || "INSP-LIVE", failureMode: details.failureMode, status: "submitted_to_whatsapp" };
-      try {
-        const key = "autoaudit-whatsapp-dispatch-log-v1";
-        const oldValue = window.localStorage.getItem(key);
-        const history = oldValue ? JSON.parse(oldValue) as unknown[] : [];
-        window.localStorage.setItem(key, JSON.stringify([logEntry, ...(Array.isArray(history) ? history : [])].slice(0, 250)));
-      } catch { /* Dispatch succeeds even if the browser audit log is unavailable. */ }
-      setSuccess(`Alert submitted to WhatsApp for ${logEntry.recipient}.`);
+      const logEntry = { dispatchId: result.dispatchId || `dispatch-${Date.now()}`, sentAt: result.sentAt || new Date().toISOString(), recipient: result.recipientName || selectedRecipient?.name || "Maintenance", station: details.station || selectedRecipient?.station || "Station not supplied", partId: details.partId || "INSP-LIVE", failureMode: details.failureMode, status: "sent" as const, automatic: false };
+      recordWhatsAppDispatch(logEntry);
+      setSuccess(`SENT to WhatsApp for ${logEntry.recipient} at ${new Date(logEntry.sentAt).toLocaleTimeString()}.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "WhatsApp dispatch failed.");
     } finally { setBusy(false); }
