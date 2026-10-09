@@ -11,7 +11,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy backend requirements
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install PyTorch CPU wheels first
+RUN pip install --no-cache-dir --default-timeout=120 --retries=5 torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# Install remaining dependencies
+RUN pip install --no-cache-dir --default-timeout=120 --retries=5 -r requirements.txt
 
 # Copy backend source code and weights directory
 COPY app/ ./app/

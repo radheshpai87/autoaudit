@@ -1,0 +1,33 @@
+{
+  "ServiceName": "autoaudit-backend",
+  "SourceConfiguration": {
+    "ImageRepository": {
+      "ImageIdentifier": "956966433293.dkr.ecr.ap-south-1.amazonaws.com/autoaudit-backend:v1.0.0",
+      "ImageConfiguration": {
+        "Port": "8000",
+        "RuntimeEnvironmentVariables": {
+          "INFERENCE_MODE": "auto",
+          "YOLO_WEIGHTS_PATH": "weights/best.pt",
+          "AWS_REGION": "ap-south-1"
+        }
+      },
+      "ImageRepositoryType": "ECR"
+    },
+    "AuthenticationConfiguration": {
+      "AccessRoleArn": "arn:aws:iam::956966433293:role/AppRunnerECRAccessRole"
+    },
+    "AutoDeploymentsEnabled": false
+  },
+  "InstanceConfiguration": {
+    "Cpu": "1 vCPU",
+    "Memory": "2 GB"
+  },
+  "HealthCheckConfiguration": {
+    "Protocol": "HTTP",
+    "Path": "/api/health",
+    "Interval": 10,
+    "Timeout": 5,
+    "HealthyThreshold": 1,
+    "UnhealthyThreshold": 5
+  }
+}
