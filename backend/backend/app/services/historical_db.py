@@ -365,12 +365,13 @@ class HistoricalDatabaseManager:
                 func.count().label("inspection_count"),
                 func.max(inspections.c.highest_rpn).label("max_rpn"),
             ).where(inspections.c.station.is_not(None)).group_by(inspections.c.station).order_by(func.max(inspections.c.highest_rpn).desc())).mappings().all()
+            batch_trend_key = func.coalesce(func.nullif(inspections.c.batch_id, ""), "UNASSIGNED").label("batch_id")
             trend_rows = conn.execute(select(
-                func.coalesce(func.nullif(inspections.c.batch_id, ""), "UNASSIGNED").label("batch_id"),
+                batch_trend_key,
                 func.count().label("total_parts"),
                 func.sum(case((inspections.c.defect_count > 0, 1), else_=0)).label("defect_parts"),
                 func.max(inspections.c.timestamp).label("latest"),
-            ).group_by(func.coalesce(func.nullif(inspections.c.batch_id, ""), "UNASSIGNED")).order_by(func.max(inspections.c.timestamp).asc())).mappings().all()
+            ).group_by(batch_trend_key).order_by(func.max(inspections.c.timestamp).asc())).mappings().all()
             stations = []
             for station in station_rows:
                 risk = conn.execute(select(
@@ -400,7 +401,7 @@ class HistoricalDatabaseManager:
                 "defect_count": defects,
                 "defect_rate": round(defects / count * 100, 2) if count else 0.0,
                 "yield_rate": round((count - defects) / count * 100, 2) if count else 0.0,
-                "latest_inspection": row["latest"],
+                "latest_inspection": row["latest"].isoformat() if hasattr(row["latest"], "isoformat") else str(row["latest"] or ""),
             })
         return {
             "total_inspections": total,
