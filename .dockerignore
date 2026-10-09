@@ -1,0 +1,35 @@
+# Git metadata and local tooling
+.git
+.github
+.agents
+.codex
+.aws
+
+# Secrets and local environment files
+**/.env
+**/.env.*
+!**/.env.example
+
+# Frontend build output and dependencies
+**/node_modules
+**/.next
+**/out
+**/dist
+**/coverage
+
+# Python environments and generated files
+**/.venv
+**/venv
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+
+# Local databases and editor/OS files
+**/*.db
+**/*.sqlite
+**/*.sqlite3
+**/.DS_Store
+**/.idea
+**/.vscode

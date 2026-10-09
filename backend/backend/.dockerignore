@@ -1,0 +1,23 @@
+# Never send local secrets or developer environments to the Docker daemon
+.env
+.env.*
+!.env.example
+.git
+.aws
+.codex
+.agents
+venv/
+.venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+tests/
+*.db
+*.sqlite
+*.sqlite3
+.DS_Store
+
+# Keep weights/ intact: Dockerfile copies it into the private backend image.
