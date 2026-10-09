@@ -1,4 +1,4 @@
-# AutoAudit 🚗🔬
+# AutoAudit
 
 > **Automotive Quality Operations Dashboard, Multi-Tiered AI Defect Inspection & WhatsApp Maintenance Dispatch Platform**
 
@@ -28,6 +28,7 @@ The platform unites an **Executive Quality Operations Dashboard** (Next.js 15, R
   - [Industrial Datasets & Benchmarks](#industrial-datasets--benchmarks)
   - [Data Preprocessing & Annotation Pipeline](#data-preprocessing--annotation-pipeline)
   - [Model Training Scripts](#model-training-scripts)
+- [Academic Research & Industry Citations](#-academic-research--industry-citations)
 - [API Reference](#-api-reference)
 - [Local Development & Quick Start](#-local-development--quick-start)
   - [1. Start the FastAPI Backend](#1-start-the-fastapi-backend)
@@ -475,6 +476,56 @@ python backend/scripts/train_condition_classifier.py
 - Generates balanced training samples across `GOOD`, `ALMOST_WORN`, and `FAULTY` states.
 - Extracts 16-D physical features and fits a 150-tree `RandomForestClassifier`.
 - Exports calibrated weights to `backend/backend/weights/brake_condition_classifier.joblib`.
+
+---
+
+## 📚 Academic Research & Industry Citations
+
+AutoAudit’s computer vision architecture, failure mode analysis, and mechanical explanations are grounded in published peer-reviewed research and industrial technical reports:
+
+### 1. MDPI Applied Sciences (2020) — Rule-Based FMEA Quality Control in Brake Disc Production Lines
+> **Citation:** Febriani, R. A., Park, H.-S., & Lee, C.-M. (2020). *A Rule-Based System for Quality Control in Brake Disc Production Lines*. **Applied Sciences**, 10(18), 6565.  
+> **DOI & URL:** [https://doi.org/10.3390/app10186565](https://doi.org/10.3390/app10186565) | [MDPI Open Access](https://www.mdpi.com/2076-3417/10/18/6565)
+
+- **Direct Application in AutoAudit:**
+  - Powers our **24KB Rule-Based FMEA Severity Engine** in [`backend/backend/app/services/severity_engine.py`](backend/backend/app/services/severity_engine.py) and Pydantic schema in [`backend/backend/app/models/schemas.py`](backend/backend/app/models/schemas.py).
+  - Implements the FMEA decision table across 4 production line stations (*Grinding Station*, *Balancing Station*, *Picking-up Station*, *Inspection Station*).
+  - Calculates the Risk Priority Number: $\text{RPN} = \text{Severity (S)} \times \text{Occurrence (O)} \times \text{Detection (D)}$.
+  - Maps real manufacturing process codes: `CR01` (Crack/Fissure, $S=10, RPN=120$), `BA02` (Dynamic Runout, $S=8, RPN=112$), `DT17` (DTV, $S=8, RPN=96$), `DT15` (Scoring/Grooves, $S=7, RPN=84$), `PU01` (Robot Unloader Gripper, $S=6, RPN=72$), `DT16` (CBN Wheel Wear, $S=6, RPN=72$), `IN01` (Rust Scale, $S=5, RPN=50$).
+  - Incorporates multi-sensor tolerance limits: Disc Thickness Variation ($\text{DTV} \le 5\ \mu\text{m}$ across $>12$ contact points), Lateral Runout ($\le 25\ \mu\text{m}$ at $5\text{ mm}$ from outer edge), and Parallelism ($\le 40\ \mu\text{m}$ across $8$ points).
+
+---
+
+### 2. IEEE Access (2024) — Car Brake Disc Surface Defect Detection Based on Improved YOLOv5
+> **Citation:** Guo, Y., Zhang, X., & Dong, Z. (2024). *Car Brake Disc Surface Defect Detection Based on Improved YOLOv5*. **IEEE Access**, vol. 12, pp. 68601–68610.  
+> **DOI & URL:** [https://doi.org/10.1109/ACCESS.2024.3399547](https://doi.org/10.1109/ACCESS.2024.3399547) | [IEEE Xplore](https://ieeexplore.ieee.org/document/10528319)
+
+- **Direct Application in AutoAudit:**
+  - Guides our core **Computer Vision & Deep Learning Architecture** for automotive brake rotor inspection in [`backend/backend/app/inference/yolo_model.py`](backend/backend/app/inference/yolo_model.py) and [`backend/scripts/train_brake_yolo.py`](backend/scripts/train_brake_yolo.py).
+  - Validates replacing manual visual inspection (high missed detection rate due to inspector fatigue) with lightweight YOLO feature extraction to achieve sub-millimeter defect detection, $<1.5\%$ missed detection rates, and low false positive rates.
+  - Informs the lightweight YOLO segmentation pipeline for real-time edge execution on factory floor IPCs and NVIDIA Jetson hardware.
+
+---
+
+### 3. Hugging Face GC10-DET — Metallic Surface Defect Dataset
+> **Dataset:** GC10-DET Metallic Surface Defect Dataset (Hosted on Hugging Face: `dronefreak/GC10-DET`).  
+> **URL:** [https://huggingface.co/datasets/dronefreak/GC10-DET](https://huggingface.co/datasets/dronefreak/GC10-DET)
+
+- **Direct Application in AutoAudit:**
+  - Establishes the 10 industrial metallic defect categories implemented in [`frontend/lib/mechanical-knowledge.ts`](frontend/lib/mechanical-knowledge.ts) and [`backend/backend/app/services/brake_disc_explanations.py`](backend/backend/app/services/brake_disc_explanations.py):
+    - *Punching Hole, Welding Line, Crescent Gap, Water Spot, Oil Spot, Silk Spot, Inclusion, Waist Folding, Rolled Pit, and Crease/Scratch*.
+  - Categorizes anomalies into `surface_level` blemishes (cosmetic/resurfaceable) versus `thermal` failure points (structural hazards).
+
+---
+
+### 4. Powertech Auto Technical Knowledge Base — Brake Disc Cracking Failure Modes
+> **Technical Report:** Powertech Auto Engineering Report: *Why Do Brake Discs Crack? Causes, Failure Modes and Preventive Solutions*.  
+> **URL:** [https://www.powertech-auto.com/why-do-brake-discs-crack/](https://www.powertech-auto.com/why-do-brake-discs-crack/)
+
+- **Direct Application in AutoAudit:**
+  - Embeds real automotive metallurgical failure physics into [`frontend/lib/mechanical-knowledge.ts`](frontend/lib/mechanical-knowledge.ts) and [`backend/backend/app/services/brake_disc_explanations.py`](backend/backend/app/services/brake_disc_explanations.py).
+  - Explains the mechanical mechanisms of thermal stress cracking: cyclic thermal shock, temperature gradients exceeding $650^\circ\text{C}$, localized transformation into brittle cementite, pad backing plate abrasive contact, and caliper pin seizure.
+  - Informs actionable workshop triage decisions: whether a rotor can be skimmed on an on-car brake lathe or must be condemned immediately based on minimum discard thickness ($\text{Min TH}$).
 
 ---
 
