@@ -199,8 +199,9 @@ app.post("/send-alert", authorized, async (req, res) => {
   }
 });
 
-app.listen(PORT, "127.0.0.1", () => {
-  console.log(`AutoAudit WhatsApp service listening on 127.0.0.1:${PORT}`);
+const HOST = process.env.WHATSAPP_HOST || "0.0.0.0";
+app.listen(PORT, HOST, () => {
+  console.log(`AutoAudit WhatsApp service listening on ${HOST}:${PORT}`);
   void startBaileys();
 });
 

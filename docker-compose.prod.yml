@@ -1,0 +1,85 @@
+
+services:
+  backend:
+    build:
+      context: ./backend/backend
+      dockerfile: Dockerfile
+    container_name: autoaudit-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - INFERENCE_MODE=${INFERENCE_MODE:-auto}
+      - YOLO_WEIGHTS_PATH=weights/best.pt
+      - CONFIDENCE_THRESHOLD=${CONFIDENCE_THRESHOLD:-0.35}
+      - UNKNOWN_ANOMALY_THRESHOLD=${UNKNOWN_ANOMALY_THRESHOLD:-0.55}
+      - DATABASE_URL=${DATABASE_URL:-}
+      - AWS_REGION=${AWS_REGION:-ap-south-1}
+      - AWS_S3_BUCKET_NAME=${AWS_S3_BUCKET_NAME:-}
+      - AWS_S3_PRESIGNED_URL_TTL=${AWS_S3_PRESIGNED_URL_TTL:-3600}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+    volumes:
+      - backend_data:/app/data
+    networks:
+      - autoaudit-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  whatsapp:
+    build:
+      context: ./services/whatsapp
+      dockerfile: Dockerfile
+    container_name: autoaudit-whatsapp
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - WHATSAPP_PORT=3001
+      - WHATSAPP_SERVICE_TOKEN=${WHATSAPP_SERVICE_TOKEN:-autoaudit-secret-whatsapp-token}
+      - WHATSAPP_EXPECTED_SENDER=${WHATSAPP_EXPECTED_SENDER:-}
+      - WHATSAPP_DIRECTORY_JSON=${WHATSAPP_DIRECTORY_JSON:-}
+    volumes:
+      - whatsapp_auth:/app/auth_baileys
+    networks:
+      - autoaudit-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        AUTOINSPECT_API_URL: http://backend:8000
+        NEXT_PUBLIC_BACKEND_URL: http://localhost:8000
+    container_name: autoaudit-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - AUTOINSPECT_API_URL=http://backend:8000
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+      - NEXT_PUBLIC_AUTOAUDIT_API=http
+      - WHATSAPP_SERVICE_URL=http://whatsapp:3001
+      - WHATSAPP_SERVICE_TOKEN=${WHATSAPP_SERVICE_TOKEN:-autoaudit-secret-whatsapp-token}
+    depends_on:
+      backend:
+        condition: service_healthy
+      whatsapp:
+        condition: service_started
+    networks:
+      - autoaudit-network
+
+networks:
+  autoaudit-network:
+    driver: bridge
+
+volumes:
+  whatsapp_auth:
+    driver: local
+  backend_data:
+    driver: local

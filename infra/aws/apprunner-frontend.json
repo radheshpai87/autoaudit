@@ -1,0 +1,35 @@
+{
+  "ServiceName": "autoaudit-frontend",
+  "SourceConfiguration": {
+    "ImageRepository": {
+      "ImageIdentifier": "956966433293.dkr.ecr.ap-south-1.amazonaws.com/autoaudit-frontend:v1.0.2",
+      "ImageConfiguration": {
+        "Port": "3000",
+        "RuntimeEnvironmentVariables": {
+          "NODE_ENV": "production",
+          "PORT": "3000",
+          "HOSTNAME": "0.0.0.0",
+          "AUTOINSPECT_API_URL": "https://tmwidm6b9y.ap-south-1.awsapprunner.com",
+          "NEXT_PUBLIC_BACKEND_URL": "https://tmwidm6b9y.ap-south-1.awsapprunner.com"
+        }
+      },
+      "ImageRepositoryType": "ECR"
+    },
+    "AuthenticationConfiguration": {
+      "AccessRoleArn": "arn:aws:iam::956966433293:role/AppRunnerECRAccessRole"
+    },
+    "AutoDeploymentsEnabled": false
+  },
+  "InstanceConfiguration": {
+    "Cpu": "1 vCPU",
+    "Memory": "2 GB"
+  },
+  "HealthCheckConfiguration": {
+    "Protocol": "HTTP",
+    "Path": "/api/health",
+    "Interval": 10,
+    "Timeout": 10,
+    "HealthyThreshold": 1,
+    "UnhealthyThreshold": 5
+  }
+}
