@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AutoAuditView } from "../components/autoaudit/Views";
-import { checkBackendHealth, dispatchWhatsAppAlert, fetchHistoricalAnalytics, fetchInspectionHistory, type HistoricalAnalyticsResponse, type HistoricalInspectionRecord, type InspectApiResponse } from "../lib/api";
+import { checkBackendHealth, dispatchWhatsAppAlert, fetchBatchSummaries, fetchDashboardAnalytics, fetchHistoricalAnalytics, fetchInspectionHistory, type BatchSummary, type DashboardAnalytics, type HistoricalAnalyticsResponse, type HistoricalInspectionRecord, type InspectApiResponse } from "../lib/api";
 import type { InspectionUploadLog } from "../lib/types";
 import { getStoredInspectionLogs, saveStoredInspection, saveStoredInspectionLogs } from "../lib/inspection-store";
 import { getWhatsAppDispatchLog, recordWhatsAppDispatch, whatsappDispatchStatusEvent, type WhatsAppDispatchLogEntry } from "../lib/dispatch-log";
@@ -39,6 +39,8 @@ export default function Home() {
   const [qualityAlert, setQualityAlert] = useState("");
   const [historicalAnalytics, setHistoricalAnalytics] = useState<HistoricalAnalyticsResponse | null>(null);
   const [historicalRecords, setHistoricalRecords] = useState<HistoricalInspectionRecord[]>([]);
+  const [dashboardAnalytics, setDashboardAnalytics] = useState<DashboardAnalytics | null>(null);
+  const [batchSummaries, setBatchSummaries] = useState<BatchSummary[]>([]);
   const [analyticsStatus, setAnalyticsStatus] = useState<"loading" | "refreshing" | "online" | "offline">("loading");
   const [analyticsError, setAnalyticsError] = useState("");
   const [dispatchStatus, setDispatchStatus] = useState<WhatsAppDispatchLogEntry | null>(null);
@@ -103,7 +105,9 @@ export default function Home() {
 
   const refreshAnalytics = useCallback(async () => {
     setAnalyticsStatus((current) => current === "online" ? "refreshing" : "loading");
-    const [analyticsResult, historyResult] = await Promise.allSettled([fetchHistoricalAnalytics(), fetchInspectionHistory(100)]);
+    const [analyticsResult, historyResult, dashboardResult, batchesResult] = await Promise.allSettled([
+      fetchHistoricalAnalytics(), fetchInspectionHistory(1000), fetchDashboardAnalytics(), fetchBatchSummaries(),
+    ]);
     if (analyticsResult.status === "fulfilled") {
       setHistoricalAnalytics(analyticsResult.value);
       setAnalyticsStatus("online");
@@ -129,6 +133,8 @@ export default function Home() {
       setAnalyticsError(analyticsResult.reason instanceof Error ? analyticsResult.reason.message : "Backend analytics could not be loaded.");
     }
     if (historyResult.status === "fulfilled") setHistoricalRecords(historyResult.value);
+    if (dashboardResult.status === "fulfilled") setDashboardAnalytics(dashboardResult.value);
+    if (batchesResult.status === "fulfilled") setBatchSummaries(batchesResult.value);
   }, [dispatchAutomatically]);
 
   useEffect(() => {
@@ -267,7 +273,7 @@ export default function Home() {
       {backend && !backend.isOnline && <div className="aa-backend-warning" role="status"><span>Backend offline on :8000 — live image inspection is unavailable until reconnection</span><button className="button button-secondary small-button" onClick={() => { setBackend(null); void checkBackendHealth().then(setBackend); }}>Retry connection</button></div>}
       {qualityAlert && <div className={`aa-quality-alert ${qualityAlert.startsWith("Unclassified") ? "aa-anomaly-alert" : ""}`} role="alert"><b>{qualityAlert}</b><button aria-label="Dismiss critical defect alert" onClick={() => setQualityAlert("")}>×</button></div>}
       {dispatchStatus && <div className={`aa-whatsapp-dispatch-status ${dispatchStatus.status}`} role={dispatchStatus.status === "failed" ? "alert" : "status"}><div><b>{dispatchStatus.status === "sent" ? "WHATSAPP ALERT SENT" : "WHATSAPP AUTO-DISPATCH FAILED"}</b><span>{dispatchStatus.station} · {dispatchStatus.failureMode} · {dispatchStatus.status === "sent" ? `accepted by WhatsApp at ${new Date(dispatchStatus.sentAt).toLocaleTimeString()}` : dispatchStatus.message}</span></div><button aria-label="Dismiss WhatsApp dispatch status" onClick={() => setDispatchStatus(null)}>×</button></div>}
-      <div className="page-content"><div className={active === "AI Inspection Studio" ? "" : "aa-persistent-inspector-hidden"}><AutoAuditView view="AI Inspection Studio" uploadLogs={uploadLogs} selectedPart={selectedPart} setSelectedPart={selectPart} navigate={navigate} backendOnline={backend?.isOnline ?? false} inferenceMode={backend?.mode ?? "offline"} onInspectionCreated={addLiveInspection} historicalAnalytics={historicalAnalytics} historicalRecords={historicalRecords} analyticsStatus={analyticsStatus} analyticsError={analyticsError} refreshAnalytics={refreshAnalytics}/></div>{active !== "AI Inspection Studio" && <AutoAuditView view={active} uploadLogs={uploadLogs} selectedPart={selectedPart} setSelectedPart={selectPart} navigate={navigate} backendOnline={backend?.isOnline ?? false} inferenceMode={backend?.mode ?? "offline"} onInspectionCreated={addLiveInspection} historicalAnalytics={historicalAnalytics} historicalRecords={historicalRecords} analyticsStatus={analyticsStatus} analyticsError={analyticsError} refreshAnalytics={refreshAnalytics}/>}<footer className="page-footer"><span>AutoAudit <span>·</span> Manufacturing quality, in focus</span><span>{backend?.isOnline ? "LIVE YOLO INSPECTIONS · BACKEND CONNECTED" : "LIVE UPLOAD METRICS · BACKEND RESULTS ONLY"}</span></footer></div>
+      <div className="page-content"><div className={active === "AI Inspection Studio" ? "" : "aa-persistent-inspector-hidden"}><AutoAuditView view="AI Inspection Studio" uploadLogs={uploadLogs} selectedPart={selectedPart} setSelectedPart={selectPart} navigate={navigate} backendOnline={backend?.isOnline ?? false} inferenceMode={backend?.mode ?? "offline"} onInspectionCreated={addLiveInspection} historicalAnalytics={historicalAnalytics} historicalRecords={historicalRecords} dashboardAnalytics={dashboardAnalytics} batchSummaries={batchSummaries} analyticsStatus={analyticsStatus} analyticsError={analyticsError} refreshAnalytics={refreshAnalytics}/></div>{active !== "AI Inspection Studio" && <AutoAuditView view={active} uploadLogs={uploadLogs} selectedPart={selectedPart} setSelectedPart={selectPart} navigate={navigate} backendOnline={backend?.isOnline ?? false} inferenceMode={backend?.mode ?? "offline"} onInspectionCreated={addLiveInspection} historicalAnalytics={historicalAnalytics} historicalRecords={historicalRecords} dashboardAnalytics={dashboardAnalytics} batchSummaries={batchSummaries} analyticsStatus={analyticsStatus} analyticsError={analyticsError} refreshAnalytics={refreshAnalytics}/>}<footer className="page-footer"><span>AutoAudit <span>·</span> Manufacturing quality, in focus</span><span>{backend?.isOnline ? "LIVE YOLO INSPECTIONS · BACKEND CONNECTED" : "LIVE UPLOAD METRICS · BACKEND RESULTS ONLY"}</span></footer></div>
     </section>
       {notice && <div className="toast"><span className="toast-check">i</span>{notice}</div>}
     </main>;

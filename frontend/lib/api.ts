@@ -25,6 +25,7 @@ export const autoAuditApi: AutoAuditApi = process.env.NEXT_PUBLIC_AUTOAUDIT_API 
 
 export interface InspectApiResponse {
   image_id: string;
+  batch_id?: string | null;
   status: "completed" | "failed" | "no_defect";
   overall_status: "PASS" | "REVIEW" | "REJECT";
   defect_count: number;
@@ -33,6 +34,9 @@ export interface InspectApiResponse {
   summary_message: string;
   annotated_image_base64?: string;
   mask_overlay_base64?: string;
+  raw_image_url?: string | null;
+  annotated_image_url?: string | null;
+  heatmap_image_url?: string | null;
   image_width: number;
   image_height: number;
   brake_component_type?: string;
@@ -116,6 +120,19 @@ export interface HistoricalInspectionRecord {
   highest_rpn: number;
   primary_process_code?: string | null;
   station?: string | null;
+  batch_id?: string | null;
+  inference_mode?: string;
+  model_name?: string;
+  top_failure_mode?: string | null;
+  recommended_action?: string | null;
+  review_required?: boolean;
+  review_status?: "pending" | "approved" | "rejected" | "not_required";
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  review_notes?: string | null;
+  raw_image_url?: string | null;
+  annotated_image_url?: string | null;
+  heatmap_image_url?: string | null;
   defects: Array<{
     defect_type: string;
     process_code: string;
@@ -131,6 +148,52 @@ export interface HistoricalInspectionRecord {
     bbox: number[];
     mask_polygon?: number[][] | null;
   }>;
+}
+
+export interface DashboardAnalytics {
+  total_inspections: number;
+  passed_count: number;
+  review_count: number;
+  rejected_count: number;
+  real_ai_count: number;
+  total_defects: number;
+  defect_breakdown: Array<{ defect_type: string; count: number; parts_affected: number; part_rate: number }>;
+  station_ranking: Array<{ station: string; inspection_count: number; max_rpn: number; failure_mode?: string | null; recommended_action?: string | null }>;
+  batch_trend: Array<{ batch_id: string; total_parts: number; defect_count: number; defect_rate: number; yield_rate: number; latest_inspection: string }>;
+}
+
+export interface BatchSummary {
+  batch_id: string;
+  total_parts: number;
+  defect_parts: number;
+  defect_count: number;
+  pass_count: number;
+  review_count: number;
+  reject_count: number;
+  defect_rate: number;
+  yield_rate: number;
+  latest_inspection: string;
+}
+
+export async function fetchDashboardAnalytics(): Promise<DashboardAnalytics> {
+  const response = await fetch("/api/py/dashboard", { cache: "no-store" });
+  if (!response.ok) throw new Error(`Dashboard analytics request failed (${response.status})`);
+  return response.json() as Promise<DashboardAnalytics>;
+}
+
+export async function fetchBatchSummaries(): Promise<BatchSummary[]> {
+  const response = await fetch("/api/py/batches", { cache: "no-store" });
+  if (!response.ok) throw new Error(`Batch request failed (${response.status})`);
+  return response.json() as Promise<BatchSummary[]>;
+}
+
+export async function updateInspectionReview(partId: string, status: "approved" | "rejected" | "pending", reviewer: string, notes = ""): Promise<void> {
+  const response = await fetch(`/api/py/history/${encodeURIComponent(partId)}/review`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ status, reviewer, notes }),
+  });
+  if (!response.ok) throw new Error(`Could not save review decision (${response.status})`);
 }
 
 export interface HistoricalAnalyticsResponse {
@@ -175,9 +238,10 @@ export async function fetchInspectionHistory(limit = 100): Promise<HistoricalIns
   return records as HistoricalInspectionRecord[];
 }
 
-export async function uploadAndInspectImage(file: File): Promise<InspectApiResponse> {
+export async function uploadAndInspectImage(file: File, batchId?: string): Promise<InspectApiResponse> {
   const formData = new FormData();
   formData.append("image", file);
+  if (batchId?.trim()) formData.append("batch_id", batchId.trim());
   const response = await fetch("/api/py/inspect", { method: "POST", body: formData });
   if (!response.ok) throw new Error(`Inference failed with status ${response.status}`);
   const body = await response.json() as Partial<InspectApiResponse>;
