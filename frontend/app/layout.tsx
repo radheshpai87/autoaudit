@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SmoothScrollProvider } from "../components/autoaudit/SmoothScroll";
 
 export const metadata: Metadata = {
   title: "AutoAudit | Manufacturing quality, in focus",
@@ -7,5 +8,11 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}</body></html>;
+  return (
+    <html lang="en">
+      <body>
+        <SmoothScrollProvider>{children}</SmoothScrollProvider>
+      </body>
+    </html>
+  );
 }
