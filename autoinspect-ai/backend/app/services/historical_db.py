@@ -92,17 +92,40 @@ class HistoricalDatabaseManager:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_inspections_timestamp ON inspections(timestamp);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_inspections_comp ON inspections(component_type);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_defect_process_code ON defect_points(process_code);")
+
+            # Ensure strict isolation by backfilling any null component_types
+            cursor.execute("UPDATE inspections SET component_type = 'brake_rotor' WHERE component_type IS NULL OR component_type = '';")
+            cursor.execute("UPDATE defect_points SET component_type = 'brake_rotor' WHERE component_type IS NULL OR component_type = '';")
+            conn.commit()
+
+    @classmethod
+    def clear_records(cls, component_type: Optional[str] = None):
+        """
+        Wipes historical inspection records with complete component isolation.
+        If component_type is provided (e.g. 'car_bonnet'), only that component's
+        records and defect points are deleted. Other components remain untouched.
+        """
+        with cls.get_connection() as conn:
+            cursor = conn.cursor()
+            if component_type:
+                comp = component_type.lower()
+                cursor.execute("""
+                    DELETE FROM defect_points
+                    WHERE inspection_id IN (SELECT id FROM inspections WHERE component_type = ?)
+                       OR component_type = ?;
+                """, (comp, comp))
+                cursor.execute("DELETE FROM inspections WHERE component_type = ?;", (comp,))
+                logger.info(f"Historical database cleared for component: {comp}")
+            else:
+                cursor.execute("DELETE FROM defect_points;")
+                cursor.execute("DELETE FROM inspections;")
+                logger.info("Historical database wiped clean for all components.")
             conn.commit()
 
     @classmethod
     def clear_all_records(cls):
-        """Wipes historical inspection records and resets the database."""
-        with cls.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM defect_points;")
-            cursor.execute("DELETE FROM inspections;")
-            conn.commit()
-        logger.info("Historical database wiped clean.")
+        """Wipes historical inspection records for all components."""
+        cls.clear_records(component_type=None)
 
     @classmethod
     def log_inspection(cls, record: HistoricalInspectionRecord) -> int:

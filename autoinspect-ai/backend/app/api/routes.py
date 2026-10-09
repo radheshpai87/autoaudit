@@ -157,9 +157,9 @@ def simulate_production_shift(
 def reset_historical_data(component_type: str = Query("brake_rotor")):
     """
     POST /api/analytics/reset
-    Wipes the historical inspection database clean so testing starts from 0 parts.
+    Wipes historical inspection database clean strictly for the specified component type.
     """
     from app.services.historical_db import HistoricalDatabaseManager
     from app.services.predictive_engine import PredictiveHeatmapEngine
-    HistoricalDatabaseManager.clear_all_records()
+    HistoricalDatabaseManager.clear_records(component_type=component_type)
     return PredictiveHeatmapEngine.generate_analytics_and_heatmaps(component_type=component_type)

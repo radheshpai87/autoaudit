@@ -435,6 +435,7 @@ class PredictiveHeatmapEngine:
 
         if len(dt16_defects) >= 3 or (len(dtv_values) >= 5 and dtv_slope > 0.10):
             meta = KNOWN_SIGNATURE_PATTERNS["DT16"]
+            is_crit = (len(dt16_defects) >= 5 or dtv_slope > 0.25)
             warnings.append(MachineSignatureWarning(
                 machine_code="DT16",
                 station=meta["station"],
@@ -443,8 +444,11 @@ class PredictiveHeatmapEngine:
                 potential_causes=meta["potential_causes"],
                 confidence=0.89,
                 spatial_signature="Concentric Annular Scoring & DTV Telemetry Drift",
-                severity_level="warning",
+                severity_level="critical" if is_crit else "warning",
                 alert_message=(
+                    f"CRITICAL MACHINE FAULT: Grinding Station DT16 CBN wheel out of tolerance! "
+                    f"{len(dt16_defects)} concentric scoring defect(s) logged; DTV drift slope: +{dtv_slope*5:.2f} µm/5 parts."
+                    if is_crit else
                     f"PREDICTIVE WARNING: Grinding Station DT16 CBN wheel wear detected. "
                     f"{len(dt16_defects)} concentric scoring defect(s) logged; DTV drift slope: +{dtv_slope*5:.2f} µm/5 parts."
                 ),
@@ -551,6 +555,7 @@ class PredictiveHeatmapEngine:
         tr03_defects = machine_defects.get("TR03", [])
         if len(tr03_defects) >= 2:
             meta = KNOWN_SIGNATURE_PATTERNS["TR03"]
+            is_crit = (len(tr03_defects) >= 5)
             warnings.append(MachineSignatureWarning(
                 machine_code="TR03",
                 station=meta["station"],
@@ -559,8 +564,11 @@ class PredictiveHeatmapEngine:
                 potential_causes=meta["potential_causes"],
                 confidence=0.88,
                 spatial_signature="Perimeter Hem Flange Burr Concentration",
-                severity_level="warning",
+                severity_level="critical" if is_crit else "warning",
                 alert_message=(
+                    f"CRITICAL TRIM FAILURE: Trimming Station TR03 punch shear edge fractured! "
+                    f"{len(tr03_defects)} severe perimeter edge burr(s) observed. Die clearance out of tolerance."
+                    if is_crit else
                     f"PREDICTIVE ALERT: Trimming Station TR03 cutting blade wear detected. "
                     f"{len(tr03_defects)} perimeter edge burr(s) observed. Excessive die clearance."
                 ),
