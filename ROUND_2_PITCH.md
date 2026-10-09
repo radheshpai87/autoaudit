@@ -31,7 +31,16 @@ AutoAudit bridges the critical gap between **factory floor AI inspection** and *
 
 AutoAudit is directly grounded in peer-reviewed scientific literature and industrial automotive technical reports:
 
-### 1. MDPI Applied Sciences (2020) — Rule-Based FMEA Quality Control
+### ⭐ 1. Primary Core Reference: IEEE Access (2024) — Car Brake Disc Surface Defect Detection Based on Improved YOLOv5
+> **Citation:** Guo, Y., Zhang, X., & Dong, Z. (2024). *Car Brake Disc Surface Defect Detection Based on Improved YOLOv5*. **IEEE Access**, vol. 12, pp. 68601–68610, May 2024.  
+> **Link:** [https://ieeexplore.ieee.org/document/10528319](https://ieeexplore.ieee.org/document/10528319) | [doi:10.1109/ACCESS.2024.3399547](https://doi.org/10.1109/ACCESS.2024.3399547)
+
+- **Why This is Our Primary Reference:**
+  - Forms the foundational **Computer Vision & Deep Learning Architecture** for automotive brake rotor inspection in [`backend/backend/app/inference/yolo_model.py`](backend/backend/app/inference/yolo_model.py) and [`backend/scripts/train_brake_yolo.py`](backend/scripts/train_brake_yolo.py).
+  - Validates replacing manual inspection (fatigue, high missed detection rates) with lightweight YOLO feature extraction to achieve sub-millimeter localization, reducing missed detection rates to $1.38\%$ and false alarms to $1.5\%$.
+  - Informs our lightweight YOLO segmentation pipeline for real-time edge execution on factory floor IPCs and NVIDIA Jetson hardware at low latency.
+
+### 2. MDPI Applied Sciences (2020) — Rule-Based FMEA Quality Control in Brake Disc Production Lines
 > **Citation:** Febriani, R. A., Park, H.-S., & Lee, C.-M. (2020). *A Rule-Based System for Quality Control in Brake Disc Production Lines*. **Applied Sciences**, 10(18), 6565.  
 > **Link:** [https://www.mdpi.com/2076-3417/10/18/6565](https://www.mdpi.com/2076-3417/10/18/6565) | [doi:10.3390/app10186565](https://doi.org/10.3390/app10186565)
 
@@ -41,30 +50,47 @@ AutoAudit is directly grounded in peer-reviewed scientific literature and indust
   - Real manufacturing process codes: `CR01` ($RPN=120$), `BA02` ($RPN=112$), `DT17` ($RPN=96$), `DT15` ($RPN=84$), `PU01` ($RPN=72$), `DT16` ($RPN=72$), `IN01` ($RPN=50$).
   - Physical multi-sensor tolerance limits: DTV $\le 5\ \mu\text{m}$, Runout $\le 25\ \mu\text{m}$, Parallelism $\le 40\ \mu\text{m}$.
 
-### 2. IEEE Access (2024) — Car Brake Disc Surface Defect Detection Based on Improved YOLOv5
-> **Citation:** Guo, Y., Zhang, X., & Dong, Z. (2024). *Car Brake Disc Surface Defect Detection Based on Improved YOLOv5*. **IEEE Access**, vol. 12, pp. 68601–68610.  
-> **Link:** [https://ieeexplore.ieee.org/document/10528319](https://ieeexplore.ieee.org/document/10528319) | [doi:10.1109/ACCESS.2024.3399547](https://doi.org/10.1109/ACCESS.2024.3399547)
+### 3. Mendeley Data (2026) — Thermal Brake Disc Fissures Dataset
+> **Dataset:** Bieberach, Natalia (2026). *Thermal Brake Disc Fissures*. **Mendeley Data**, V1.  
+> **Link:** [https://data.mendeley.com/datasets/gbffch5dmv/1](https://data.mendeley.com/datasets/gbffch5dmv/1) | [doi:10.17632/gbffch5dmv.1](https://doi.org/10.17632/gbffch5dmv.1)
 
 - **How Applied in AutoAudit:**
-  - Forms the foundation for our **Ultralytics YOLO segmentation architecture** in [`backend/backend/app/inference/yolo_model.py`](backend/backend/app/inference/yolo_model.py) and [`backend/scripts/train_brake_yolo.py`](backend/scripts/train_brake_yolo.py).
-  - Validates replacing manual inspection with lightweight YOLO feature extraction to achieve sub-millimeter localization and reduce missed detection rates to $< 1.5\%$.
+  - The ground-truth dataset utilized by our dataset converter [`backend/scripts/prepare_thermal_dataset.py`](backend/scripts/prepare_thermal_dataset.py) to train YOLO segmentation on real thermal brake fissures.
+  - Contains thermal infrared captures of cracked brake discs and annotated ground-truth masks for **Penetrating**, **Incipient**, and **Superficial** micro-fissures.
 
-### 3. Hugging Face GC10-DET — Industrial Metallic Surface Defect Dataset
-> **Dataset:** GC10-DET Metallic Surface Defect Dataset (`dronefreak/GC10-DET`).  
-> **Link:** [https://huggingface.co/datasets/dronefreak/GC10-DET](https://huggingface.co/datasets/dronefreak/GC10-DET)
+### 4. ViCoS Lab — Kolektor Surface-Defect Dataset (KolektorSDD)
+> **Dataset & Research:** Tabernik, D., Šuc, S., & Skočaj, D. (2020). *Automated surface anomaly detection with visually explained deep learning*. **Computers in Industry**, 114, 103139.  
+> **Link:** [https://www2.vicos.si/resources/kolektorsdd/](https://www2.vicos.si/resources/kolektorsdd/)
+
+- **How Applied in AutoAudit:**
+  - Benchmark dataset for microscopic crack, fracture, and fissure detection on precision machined metal surfaces.
+  - Validates our morphology-based crevice isolation ($T_B(I)$ Black-Hat transform in `feature_extractor.py`) and sub-millimeter fissure segmentation.
+
+### 5. GC10-DET — Metallic Surface Defect Dataset (Hugging Face & DatasetNinja)
+> **Dataset:** GC10-DET Metallic Surface Defect Dataset.  
+> **Links:** [Hugging Face (`dronefreak/GC10-DET`)](https://huggingface.co/datasets/dronefreak/GC10-DET) | [DatasetNinja GC10-DET](https://datasetninja.com/gc10-det#download)
 
 - **How Applied in AutoAudit:**
   - Standardizes the 10 metallic defect classes in [`frontend/lib/mechanical-knowledge.ts`](frontend/lib/mechanical-knowledge.ts) and [`backend/backend/app/services/brake_disc_explanations.py`](backend/backend/app/services/brake_disc_explanations.py):
     - *Punching Hole, Welding Line, Crescent Gap, Water Spot, Oil Spot, Silk Spot, Inclusion, Waist Folding, Rolled Pit, Crease/Scratch*.
   - Powers classification into `surface_level` vs. `thermal` origins.
 
-### 4. Powertech Auto Technical Knowledge Base — Why Do Brake Discs Crack?
+### 6. Powertech Auto Technical Knowledge Base — Why Do Brake Discs Crack?
 > **Technical Report:** Powertech Auto Engineering Report: *Why Do Brake Discs Crack? Causes, Failure Modes and Preventive Solutions*.  
 > **Link:** [https://www.powertech-auto.com/why-do-brake-discs-crack/](https://www.powertech-auto.com/why-do-brake-discs-crack/)
 
 - **How Applied in AutoAudit:**
   - Grounds mechanical root causes in metallurgical reality: thermal shock gradients $> 650^\circ\text{C}$, cementite phase transformations, pad backing metal-on-metal abrasion, and minimum discard thickness limits ($\text{Min TH}$).
   - Informs workshop actions: on-car brake lathe skimming vs. immediate axle pair condemnation.
+
+### 7. MAT Foundry Group — The Ultimate Guide to Automotive Brake Discs
+> **Engineering Guide:** MAT Foundry Group: *The Ultimate Guide to Automotive Brake Discs: Materials, Manufacturing & Defect Tolerances*.  
+> **Link:** [https://www.matfoundrygroup.com/products/the-ultimate-guide-to-automotive-brake-discs](https://www.matfoundrygroup.com/products/the-ultimate-guide-to-automotive-brake-discs)
+
+- **How Applied in AutoAudit:**
+  - Automotive metallurgical standards for grey cast iron grades: **HT250** (high thermal conductivity for ventilated sports discs) vs. **HT200** (solid urban rotors).
+  - Establishes industrial tolerances for Disc Thickness Variation (DTV), Lateral Runout, cooling vane ventilation aerodynamics, and thermal checking thresholds.
+  - Informs line status classifications in the Next.js Operations Dashboard (Line 01: High-Speed HT250, Line 02: Standard HT200, Line 03: Carbon-Silicon Carbide).
 
 ---
 
