@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { SmoothScrollProvider } from "../components/autoaudit/SmoothScroll";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "AutoAudit | Manufacturing quality, in focus",
   description: "A clear, real-time view of production quality and brake rotor inspection.",

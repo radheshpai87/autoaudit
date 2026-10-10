@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AutoAuditView, type ViewName } from "../components/autoaudit/Views";
 import { checkBackendHealth, dispatchWhatsAppAlert, fetchBatchSummaries, fetchDashboardAnalytics, fetchHistoricalAnalytics, fetchInspectionHistory, type BatchSummary, type DashboardAnalytics, type HistoricalAnalyticsResponse, type HistoricalInspectionRecord, type InspectApiResponse } from "../lib/api";
