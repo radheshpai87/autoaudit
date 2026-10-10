@@ -450,7 +450,7 @@ export default function Home() {
     );
   }
 
-  return <main className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${active === "AI Inspection Studio" ? "inspection-mode" : ""}`}>
+  return <main className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
     <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`}>
       <div className="brand-header">
         <div className="brand" role="button" tabIndex={0} onClick={goToLanding} onKeyDown={(e) => { if (e.key === "Enter") goToLanding(); }} title="Return to Product Overview">
