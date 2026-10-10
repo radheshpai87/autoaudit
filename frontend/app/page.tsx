@@ -9,11 +9,12 @@ import { getWhatsAppDispatchLog, recordWhatsAppDispatch, whatsappDispatchStatusE
 import { getCurrentUserRole, setCurrentUserRole, USERS, type UserRole } from "../lib/auth";
 import { AuthModal } from "../components/autoaudit/AuthModal";
 import { AppIcon } from "../components/autoaudit/AppIcon";
+import { LoginPage } from "../components/autoaudit/LoginPage";
+import { LandingPage } from "../components/autoaudit/LandingPage";
 
 type IconName = "grid" | "disc" | "box" | "chart" | "menu" | "chevronLeft" | "chevronRight";
 
 const navigation: { label: ViewName; icon: IconName; roleTag?: string }[] = [
-  { label: "Plant Overview & Guide", icon: "grid" },
   { label: "Operator Station", icon: "disc", roleTag: "OPERATOR" },
   { label: "Main Dashboard", icon: "grid", roleTag: "MANAGER" },
   { label: "AI Inspection Studio", icon: "disc", roleTag: "QUALITY" },
@@ -38,6 +39,7 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
 }
 
 export default function Home() {
+  const [appFlow, setAppFlow] = useState<"landing" | "login" | "dashboard">("landing");
   const [active, setActive] = useState<ViewName>("Operator Station");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [currentRole, setCurrentRole] = useState<UserRole>("operator");
@@ -264,9 +266,20 @@ export default function Home() {
     setCurrentRole(role);
     const user = USERS[role];
     const url = new URL(window.location.href);
-    const view = navigation.find((item) => item.label === url.searchParams.get("view"))?.label;
-    if (view) setActive(view);
-    else setActive(user.defaultView as ViewName);
+    const viewParam = url.searchParams.get("view");
+    const flowParam = url.searchParams.get("flow");
+    if (viewParam) {
+      const view = navigation.find((item) => item.label === viewParam)?.label;
+      if (view) {
+        setActive(view);
+        setAppFlow("dashboard");
+      }
+    } else if (flowParam === "login") {
+      setAppFlow("login");
+    } else if (flowParam === "dashboard") {
+      setAppFlow("dashboard");
+      setActive(user.defaultView as ViewName);
+    }
     const part = url.searchParams.get("part");
     if (part) setSelectedPart(part);
     const updateClock = () => setClock(new Intl.DateTimeFormat("en-IN", { weekday: "long", month: "long", day: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" }).format(new Date()));
@@ -275,7 +288,15 @@ export default function Home() {
     const onPopState = () => {
       const next = new URL(window.location.href);
       const page = navigation.find((item) => item.label === next.searchParams.get("view"))?.label;
-      if (page) setActive(page); else setActive("AI Inspection Studio");
+      const flow = next.searchParams.get("flow");
+      if (page) {
+        setActive(page);
+        setAppFlow("dashboard");
+      } else if (flow === "login") {
+        setAppFlow("login");
+      } else if (!next.searchParams.get("view")) {
+        setAppFlow("landing");
+      }
       setSelectedPart(next.searchParams.get("part") ?? "");
     };
     window.addEventListener("popstate", onPopState);
@@ -379,15 +400,63 @@ export default function Home() {
     window.setTimeout(() => setNotice(""), 4500);
   }, []);
 
+  const handleLoginPersona = useCallback((newRole: UserRole) => {
+    handleRoleChange(newRole);
+    setAppFlow("dashboard");
+    const url = new URL(window.location.href);
+    url.searchParams.delete("flow");
+    url.searchParams.set("view", USERS[newRole].defaultView);
+    window.history.pushState({}, "", url);
+  }, [handleRoleChange]);
+
+  const goToLanding = useCallback(() => {
+    setAppFlow("landing");
+    const url = new URL(window.location.href);
+    url.searchParams.delete("view");
+    url.searchParams.delete("part");
+    url.searchParams.delete("flow");
+    window.history.pushState({}, "", url);
+  }, []);
+
+  const goToLogin = useCallback(() => {
+    setAppFlow("login");
+    const url = new URL(window.location.href);
+    url.searchParams.delete("view");
+    url.searchParams.set("flow", "login");
+    window.history.pushState({}, "", url);
+  }, []);
+
   const activeUser = USERS[currentRole];
+
+  if (appFlow === "landing") {
+    return (
+      <LandingPage
+        onGoToLogin={goToLogin}
+        onSelectRoleAndEnter={handleLoginPersona}
+        backendOnline={backend?.isOnline ?? false}
+        inferenceMode={backend?.mode ?? "offline"}
+      />
+    );
+  }
+
+  if (appFlow === "login") {
+    return (
+      <LoginPage
+        onLogin={handleLoginPersona}
+        onBackToLanding={goToLanding}
+        backendOnline={backend?.isOnline ?? false}
+        inferenceMode={backend?.mode ?? "offline"}
+      />
+    );
+  }
 
   return <main className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${active === "AI Inspection Studio" ? "inspection-mode" : ""}`}>
     <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`}>
       <div className="brand-header">
-        <a className="brand" href={`?view=${encodeURIComponent(activeUser.defaultView)}`} onClick={(e) => { e.preventDefault(); navigate(activeUser.defaultView as ViewName); }}>
+        <div className="brand" role="button" tabIndex={0} onClick={goToLanding} onKeyDown={(e) => { if (e.key === "Enter") goToLanding(); }} title="Return to Product Overview">
           <span className="brand-mark"><Icon name="disc" size={21}/></span>
           {!sidebarCollapsed && <span className="brand-copy"><strong>autoaudit</strong><small>{activeUser.roleTitle.toUpperCase()}</small></span>}
-        </a>
+        </div>
         <button
           className="sidebar-toggle-btn"
           onClick={toggleSidebar}
@@ -477,11 +546,19 @@ export default function Home() {
         <div className="top-actions">
           <button
             className="button button-secondary"
-            onClick={() => navigate("Plant Overview & Guide")}
+            onClick={goToLanding}
             style={{ fontSize: "12px", padding: "6px 12px", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "6px" }}
-            title="Overview explaining what AutoAudit is doing"
+            title="Return to Product Overview Landing Page"
           >
-            <AppIcon name="book" size={14} /> What We Do
+            <AppIcon name="book" size={14} /> Product Overview
+          </button>
+          <button
+            className="button button-secondary"
+            onClick={goToLogin}
+            style={{ fontSize: "12px", padding: "6px 10px", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "5px" }}
+            title="Switch plant persona or log out"
+          >
+            <AppIcon name="lock" size={13} /> Switch Persona
           </button>
           <button
             className="aa-role-pill-btn"

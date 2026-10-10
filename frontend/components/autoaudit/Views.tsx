@@ -142,9 +142,8 @@ export function AutoAuditView(props: Props) {
   if (props.view === "Plant Overview & Guide") {
     return (
       <LandingPage
-        onEnterApp={() => props.navigate(props.userRole === "operator" ? "Operator Station" : props.userRole === "manager" ? "Main Dashboard" : "AI Inspection Studio")}
-        onSwitchRole={(role) => props.onSwitchRole?.(role)}
-        onNavigate={props.navigate}
+        onGoToLogin={() => props.navigate("Operator Station")}
+        onSelectRoleAndEnter={(role) => props.onSwitchRole?.(role)}
         backendOnline={props.backendOnline}
         inferenceMode={props.inferenceMode}
       />
@@ -229,44 +228,47 @@ function Overview({ navigate, dashboardAnalytics }: Props) {
     <Header eyebrow="AUTOAUDIT · PLANT QUALITY" title="Main Dashboard" subtitle="Plant-wide quality metrics from shared backend inspection records" action={<div className="aa-overview-actions"><button className="button button-secondary" onClick={() => navigate("Operator Station")}>Operator Station</button><button className="button button-secondary" onClick={() => navigate("Batch Data")}>Batch data</button><button className="button button-secondary" onClick={() => navigate("Inspection History")}>Inspection history</button><button className="button button-primary" onClick={() => navigate("AI Inspection Studio")}>Inspect component</button></div>}/>
     <section className="panel aa-plain-briefing" aria-label="Executive plain language plant summary">
       <div className="aa-briefing-head">
-        <span className="aa-briefing-icon"><AppIcon name="megaphone" size={22} color="#0284c7" /></span>
-        <div>
-          <h3>Executive Plant Health Briefing (Plain English)</h3>
-          <p>Real-time plant status translated for non-technical executives, managers &amp; department heads</p>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <span className="aa-briefing-icon"><AppIcon name="megaphone" size={20} color="#2563eb" /></span>
+          <div>
+            <h3>Executive Plant Status</h3>
+            <span style={{ fontSize: "12px", color: "#64748b" }}>Live quality telemetry for plant operations leadership</span>
+          </div>
         </div>
         <Badge tone={totalInspected === 0 ? "neutral" : fpy >= 95 ? "passed" : fpy >= 90 ? "review" : "reject"}>
-          {totalInspected === 0 ? "STATUS: AWAITING RUN" : fpy >= 95 ? "HEALTHY OPERATION (≥95%)" : fpy >= 90 ? "MODERATE ATTENTION" : "HIGH SCRAP ALERT"}
+          {totalInspected === 0 ? "AWAITING RUN" : fpy >= 95 ? "OPTIMAL (≥95% FPY)" : fpy >= 90 ? "MODERATE SCRAP" : "HIGH SCRAP ALERT"}
         </Badge>
       </div>
       <div className="aa-briefing-body">
-        <p>
-          <b>Plant Operations Summary: </b>
-          {totalInspected === 0 ? (
-            "No components inspected yet on today's shift. Plant conveyor is ready for inspection photos or live camera feed."
-          ) : fpy >= 95 ? (
-            `The plant is operating at a healthy ${fpy.toFixed(1)}% First-Pass Yield, beating the corporate 95.0% target. Out of ${totalInspected} parts inspected, ${passedCount} are certified road-ready. Only ${rejectedCount} defective parts were caught and safely removed from the supply chain.`
-          ) : (
-            `First-Pass Yield is currently at ${fpy.toFixed(1)}% (below the 95.0% target). ${rejectedCount} parts have been rejected out of ${totalInspected} inspected. The primary defect mode is ${topDefectName} attributed to ${topStationName}. Corrective tooling adjustment recommended.`
-          )}
-        </p>
+        <div className="aa-briefing-summary-card">
+          <p>
+            {totalInspected === 0 ? (
+              "Production line initialized and ready for automated camera inspections."
+            ) : fpy >= 95 ? (
+              <span>Operating at a healthy <b>{fpy.toFixed(1)}% First-Pass Yield</b> ({passedCount} of {totalInspected} parts conforming). Only {rejectedCount} scrap unit(s) quarantined.</span>
+            ) : (
+              <span>Yield is currently <b>{fpy.toFixed(1)}%</b> (below 95% threshold). {rejectedCount} units rejected. Primary defect is <b>{topDefectName}</b> at <b>{topStationName}</b>.</span>
+            )}
+          </p>
+        </div>
         <div className="aa-briefing-highlights">
           <div>
-            <small style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><AppIcon name="money" size={13} color="#dc2626" /> ESTIMATED SCRAP COST</small>
-            <b>{rejectedCount > 0 ? `₹${(rejectedCount * 850).toLocaleString()} est.` : "₹0 (Zero Scrap)"}</b>
-            <span>Calculated from {rejectedCount} rejected rotor casting(s)</span>
+            <small style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><AppIcon name="money" size={13} color="#dc2626" /> SCRAP VALUE</small>
+            <b>{rejectedCount > 0 ? `₹${(rejectedCount * 850).toLocaleString()}` : "₹0"}</b>
+            <span>{rejectedCount} scrapped units</span>
           </div>
           <div>
-            <small style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><AppIcon name="target" size={13} color="#2563eb" /> SHIFT PRODUCTION PACE</small>
-            <b>{totalInspected > 0 ? `${totalInspected} Parts Tracked` : "Ready for Run"}</b>
-            <span>Target: 250 brake units / shift</span>
+            <small style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><AppIcon name="target" size={13} color="#2563eb" /> SHIFT VOLUME</small>
+            <b>{totalInspected > 0 ? `${totalInspected} Parts` : "0 Parts"}</b>
+            <span>Target: 250 units / shift</span>
           </div>
           <div>
-            <small style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><AppIcon name="shield" size={13} color="#16a34a" /> VEHICLE SAFETY INTEGRITY</small>
+            <small style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><AppIcon name="shield" size={13} color="#16a34a" /> SAFETY INTEGRITY</small>
             <b>100% Guaranteed</b>
-            <span>Zero critical flaws escaped to finished goods</span>
+            <span>Zero critical flaws escaped</span>
           </div>
         </div>
-        <div style={{ marginTop: "16px" }}>
+        <div style={{ marginTop: "14px" }}>
           <WhatsAppDispatchAction
             details={{
               station: topStationName !== "All Stations Nominal" ? topStationName : "ST-04 Finish Lathe & Grinding",
@@ -276,7 +278,7 @@ function Overview({ navigate, dashboardAnalytics }: Props) {
               partId: `SHIFT-${new Date().toISOString().slice(0, 10)}`,
               verdict: fpy >= 95 ? "PASS" : "REVIEW",
             }}
-            thresholdLabel={`Executive Shift Briefing · ${totalInspected} parts tracked · FPY ${fpy.toFixed(1)}%`}
+            thresholdLabel={`Dispatch Executive Briefing · ${totalInspected} parts · FPY ${fpy.toFixed(1)}%`}
             historicalContext={{
               totalInspected,
               passRate: fpy / 100,
@@ -290,10 +292,27 @@ function Overview({ navigate, dashboardAnalytics }: Props) {
       </div>
     </section>
     <section className="aa-executive-kpis" aria-label="Executive quality metrics">
-      <article className="panel aa-executive-kpi"><span className="aa-executive-label">PLANT QUALITY YIELD</span><b className={fpy >= 90 ? "good" : "bad"}>{fpy.toFixed(1)}%</b><small>Target: 95.0% · Calculated from {totalInspected} parts</small><Badge tone={fpy >= 95 ? "passed" : "reject"}>{fpy >= 95 ? "ON TARGET" : "BELOW SPEC"}</Badge></article>
-      <article className="panel aa-executive-kpi"><span className="aa-executive-label">COMPONENTS PROCESSED</span><b>{totalInspected}</b><small>{realAiCount} Real AI verified · {totalInspected - realAiCount} demo / other</small></article>
-      <article className="panel aa-executive-kpi"><span className="aa-executive-label">PARTS REJECTED</span><b>{rejectedCount} <small>({rejectRate.toFixed(1)}%)</small></b><small>Rejected out of {totalInspected} inspected parts</small></article>
-      <article className="panel aa-executive-kpi"><span className="aa-executive-label">PRIMARY DEFECT MODE</span><b className="aa-executive-hazard">{topDefectName}</b><small>Attributed station: {topStationName}</small></article>
+      <article className="panel aa-executive-kpi">
+        <span className="aa-executive-label">FIRST-PASS YIELD</span>
+        <b className={fpy >= 90 ? "good" : "bad"}>{fpy.toFixed(1)}%</b>
+        <small>Target: 95.0%</small>
+        <Badge tone={fpy >= 95 ? "passed" : "reject"}>{fpy >= 95 ? "ON TARGET" : "BELOW SPEC"}</Badge>
+      </article>
+      <article className="panel aa-executive-kpi">
+        <span className="aa-executive-label">TOTAL INSPECTED</span>
+        <b>{totalInspected}</b>
+        <small>{realAiCount} YOLO verified</small>
+      </article>
+      <article className="panel aa-executive-kpi">
+        <span className="aa-executive-label">REJECTED DISCS</span>
+        <b>{rejectedCount} <small>({rejectRate.toFixed(1)}%)</small></b>
+        <small>{passedCount} passed conforming</small>
+      </article>
+      <article className="panel aa-executive-kpi">
+        <span className="aa-executive-label">PRIMARY DEFECT</span>
+        <b className="aa-executive-hazard">{topDefectName}</b>
+        <small>{topStationName}</small>
+      </article>
     </section>
     <section className="panel aa-trend-panel"><div className="aa-section-heading"><div><h2>Batch Defect Rate Trend &amp; SPC Quality Limit</h2><p>Production batch results from PostgreSQL · latest {trendPoints.length} shown</p></div><div className="aa-trend-legend"><span><i className="aa-legend-blue"/>Defect rate</span><span className="aa-ucl-legend"><i/>10.0% scrap limit</span></div></div>
       {trendPoints.length ? <><div className="aa-trend-plot"><svg viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label="Interactive defect rate and yield trend for recent daily upload groups">
