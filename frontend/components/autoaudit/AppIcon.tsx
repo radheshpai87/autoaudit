@@ -29,6 +29,8 @@ export type AppIconName =
   | "sparkles"
   | "disc"
   | "chevronDown"
+  | "chevronRight"
+  | "chevronLeft"
   | "fullscreen"
   | "wrench";
 
@@ -250,6 +252,18 @@ export function AppIcon({
       return (
         <svg {...props}>
           <polyline points="6 9 12 15 18 9" />
+        </svg>
+      );
+    case "chevronRight":
+      return (
+        <svg {...props}>
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      );
+    case "chevronLeft":
+      return (
+        <svg {...props}>
+          <polyline points="15 18 9 12 15 6" />
         </svg>
       );
     case "fullscreen":
