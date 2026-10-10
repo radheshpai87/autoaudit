@@ -93,14 +93,14 @@ export function LoginPage({
                 <div className="aa-login-card-info-row">
                   <span className="aa-login-dept">{user.department}</span>
                   <span className="aa-login-phone">
-                    <AppIcon name="phone" size={11} color="#34d399" />
+                    <AppIcon name="phone" size={11} color="#059669" />
                     {user.phone}
                   </span>
                 </div>
 
                 <div className="aa-login-summary-box">
                   <div className="aa-login-summary-label">
-                    <AppIcon name="sparkles" size={12} color="#60a5fa" />
+                    <AppIcon name="sparkles" size={12} color="#2563eb" />
                     <strong>Workspace Focus:</strong>
                   </div>
                   <p>{user.simpleSummary}</p>

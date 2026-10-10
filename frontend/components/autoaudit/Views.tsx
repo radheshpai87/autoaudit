@@ -415,6 +415,18 @@ function Inspector({ uploadLogs, selectedPart, setSelectedPart, navigate, backen
     }
     void inspectFile(next);
   };
+  const loadSampleImage = async (url: string, name: string) => {
+    try {
+      setScanning(true);
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const sampleFile = new File([blob], name, { type: blob.type || "image/jpeg" });
+      chooseFile(sampleFile);
+    } catch {
+      setUploadError("Could not load sample demo rotor.");
+      setScanning(false);
+    }
+  };
   const clearUpload = () => {
     activeUpload.current += 1;
     setScanning(false); setFile(null); setPreview(""); setAnnotatedPreview(""); setLiveResult(null); setLiveSelection(0); setUploadError(""); setFileMessage(""); setSelectedPart("");
@@ -427,6 +439,20 @@ function Inspector({ uploadLogs, selectedPart, setSelectedPart, navigate, backen
     <Header eyebrow="AI INSPECTION STUDIO" title="AI Inspection Studio" subtitle="Upload a brake component image to run the live YOLO quality gate" action={<div className="aa-inspector-actions">{uploadLogs.length > 0 && <label className="aa-part-select"><span>Previous parts · latest 8</span><select aria-label="Previously inspected parts" value={selectedPart} onChange={(event) => { setUploadError(""); setSelectedPart(event.target.value); }}><option value="">Select a previous part</option>{uploadLogs.slice(0, 8).map((entry) => <option key={entry.id} value={entry.id}>{entry.fileName} · {new Date(entry.uploadedAt).toLocaleDateString()}</option>)}</select></label>}<button className="button button-primary" onClick={clearUpload}>+ Inspect New Component</button>{current && <Badge tone={current.inference_mode === "real_ai" ? "passed" : "neutral"}>{current.inference_mode === "real_ai" ? "REAL YOLO AI" : "MOCK BACKEND"}</Badge>}{current && processingTimeMs !== null && <Badge tone="passed"><span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><AppIcon name="clock" size={13} /> {(processingTimeMs / 1000).toFixed(2)}s INFERENCE</span></Badge>}{!current && <Badge tone={backendOnline && inferenceMode === "real_ai" ? "passed" : "neutral"}>{backendOnline ? `${inferenceMode.toUpperCase()} READY` : "BACKEND OFFLINE"}</Badge>}</div>}/>
     {!current && <label className="aa-batch-id-field"><span>Production batch ID <small>Optional · the same ID groups parts from one run</small></span><input value={batchId} maxLength={80} disabled={scanning} onChange={(event) => setBatchId(event.target.value)} placeholder="e.g. BATCH-2026-104"/></label>}
     {!current && <section className={`aa-primary-upload aa-upload-hero ${scanning ? "scanning" : ""}`} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (!scanning) chooseFile(event.dataTransfer.files?.[0]); }} aria-label="Upload brake component image"><input ref={inputRef} type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" hidden onChange={(event) => { chooseFile(event.currentTarget.files?.[0]); event.currentTarget.value = ""; }}/><span className="aa-primary-upload-icon">⇧</span><div className="aa-primary-upload-copy"><b>{scanning ? "Checking image with YOLO…" : "Drop or choose a brake image"}</b><span>{scanning ? "Your inspection results will appear here." : "JPG, PNG or WEBP · Up to 20 MB · YOLO starts automatically"}</span>{file && <small>{file.name}</small>}</div><div className="aa-primary-upload-actions"><button className="button button-primary aa-primary-upload-button" disabled={scanning} onClick={() => inputRef.current?.click()}>{scanning ? "Checking…" : "Choose image"}</button>{file && <button className="button button-secondary" disabled={scanning} onClick={clearUpload}>Clear</button>}</div>{scanning && <span className="aa-spinner" aria-label="Inspection in progress"/>}</section>}
+    {!current && (
+      <div className="aa-sample-quick-bar">
+        <span className="aa-sample-quick-title">Instant Demo Rotors:</span>
+        <button type="button" className="aa-sample-quick-chip" disabled={scanning} onClick={() => void loadSampleImage("/samples/sample_rotor_crack.jpg", "sample_rotor_crack.jpg")}>
+          <span className="sample-chip-indicator red" /> Thermal Crack (Reject)
+        </button>
+        <button type="button" className="aa-sample-quick-chip" disabled={scanning} onClick={() => void loadSampleImage("/samples/sample_rotor_scratch.jpg", "sample_rotor_scratch.jpg")}>
+          <span className="sample-chip-indicator amber" /> Deep Scoring (Review)
+        </button>
+        <button type="button" className="aa-sample-quick-chip" disabled={scanning} onClick={() => void loadSampleImage("/samples/sample_rotor_clean.jpg", "sample_rotor_clean.jpg")}>
+          <span className="sample-chip-indicator green" /> Conforming Rotor (Pass)
+        </button>
+      </div>
+    )}
     {!current && uploadError && <div className="aa-upload-feedback" role="alert"><span>{uploadError}</span><button className="button button-secondary" onClick={() => { clearUpload(); inputRef.current?.click(); }}>Choose image</button></div>}
     {!current && file && preview && <section className="panel aa-inspector-image"><div className="panel-heading"><div><h2>Uploaded image</h2><p>{file.name} · {scanning ? "YOLO inference in progress" : "Preview"}</p></div></div><Image unoptimized width={1200} height={1200} src={preview} alt={`Uploaded brake component ${file.name}`} className="aa-upload-preview"/>{scanning && <div className="aa-scanning-overlay"><span className="aa-spinner"/>Running YOLOv8 Inspection...</div>}</section>}
     {current && preview && <><div className={`aa-inspector-grid ${full ? "fullscreen-image" : ""}`}><section className={`panel aa-inspector-image has-live-result ${full ? "aa-image-full" : ""}`}><div className="panel-heading"><div><h2>Original & YOLO detection</h2><p>{currentLog?.fileName ?? file?.name ?? current.brake_component_type}</p></div><button className="icon-button" onClick={() => setFull(!full)} aria-label={full ? "Exit fullscreen" : "Expand image"}><AppIcon name="fullscreen" size={15} /></button></div><LiveImageComparison source={preview} annotatedSource={annotatedPreview} result={current} selectedIndex={liveSelection} zoom={zoom} onSelect={setLiveSelection}/><div className="aa-viewer-toolbar"><button onClick={() => setZoom(Math.max(.8, zoom - .1))} aria-label="Zoom out">−</button><span>{Math.round(zoom * 100)}%</span><button onClick={() => setZoom(Math.min(1.5, zoom + .1))} aria-label="Zoom in">+</button><button onClick={() => setZoom(1)}>Reset zoom</button></div></section></div><LiveInspectionAnalysis result={current} selectedIndex={liveSelection} navigate={navigate}/>{fileMessage && <p className="aa-inspection-message">{fileMessage}</p>}<button className="button button-secondary aa-replace-upload" onClick={clearUpload}>Replace this image</button></>}

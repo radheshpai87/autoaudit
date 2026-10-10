@@ -89,6 +89,20 @@ export function OperatorStation({
     }
   };
 
+  const loadSampleImage = async (url: string, name: string) => {
+    try {
+      setScanning(true);
+      setErrorMsg("");
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const sampleFile = new File([blob], name, { type: blob.type || "image/jpeg" });
+      void handleFileChange(sampleFile);
+    } catch {
+      setErrorMsg("Could not load sample demo rotor.");
+      setScanning(false);
+    }
+  };
+
   const getPlainEnglishDefectExplanation = (defectType: string) => {
     const lower = defectType.toLowerCase();
     if (lower.includes("crack")) {
@@ -310,6 +324,16 @@ export function OperatorStation({
             </div>
             {errorMsg && <div className="aa-operator-error" role="alert" style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><AppIcon name="alert" size={14} color="#dc2626" /> {errorMsg}</div>}
           </section>
+
+          <div className="aa-sample-quick-bar">
+            <span className="aa-sample-quick-title">Test Demo Rotor:</span>
+            <button type="button" className="aa-sample-quick-chip" disabled={scanning} onClick={() => void loadSampleImage("/samples/sample_rotor_crack.jpg", "sample_rotor_crack.jpg")}>
+              <span className="sample-chip-indicator red" /> Load Defective Rotor (Red Bin #3)
+            </button>
+            <button type="button" className="aa-sample-quick-chip" disabled={scanning} onClick={() => void loadSampleImage("/samples/sample_rotor_clean.jpg", "sample_rotor_clean.jpg")}>
+              <span className="sample-chip-indicator green" /> Load Conforming Rotor (Green Ship)
+            </button>
+          </div>
         </div>
 
         {/* Right: Preview & Shift Safety Checklist */}

@@ -132,7 +132,7 @@ export function LandingPage({
             </div>
             <h1 className="aa-landing-headline">
               Automated Vision Inspection. <br />
-              <span style={{ color: "#a1a1aa", fontWeight: 700 }}>Intelligent Quality Gate for Brake Discs.</span>
+              <span style={{ color: "#334155", fontWeight: 750 }}>Intelligent Quality Gate for Brake Discs.</span>
             </h1>
             <p className="aa-landing-subhead">
               Sub-second neural defect segmentation, micron-level metrology checks, and instant zero-jargon WhatsApp dispatch across the plant hierarchy.

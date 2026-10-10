@@ -3089,6 +3089,73 @@ tbody tr:hover td {
   margin-top: 2px;
 }
 
+/* Instant Demo Sample Bar */
+.aa-sample-quick-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.aa-sample-quick-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  letter-spacing: 0.2px;
+}
+
+.aa-sample-quick-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.aa-sample-quick-chip:hover:not(:disabled) {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.aa-sample-quick-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sample-chip-indicator {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.sample-chip-indicator.red {
+  background: #dc2626;
+}
+
+.sample-chip-indicator.amber {
+  background: #d97706;
+}
+
+.sample-chip-indicator.green {
+  background: #16a34a;
+}
+
 /* Pipeline Grid */
 .aa-landing-section {
   display: flex;
