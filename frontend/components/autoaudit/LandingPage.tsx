@@ -131,18 +131,19 @@ export function LandingPage({
               <span>INDUSTRY 4.0 · AUTOMATED COMPUTER VISION</span>
             </div>
             <h1 className="aa-landing-headline">
-              Intelligent Quality Gate &amp; Vision Inspection for Automotive Brake Discs
+              Automated Vision Inspection. <br />
+              <span style={{ color: "#a1a1aa", fontWeight: 700 }}>Intelligent Quality Gate for Brake Discs.</span>
             </h1>
             <p className="aa-landing-subhead">
-              Sub-second YOLO neural defect detection, micron-level metrology checks, and zero-jargon WhatsApp dispatch across the manufacturing hierarchy.
+              Sub-second neural defect segmentation, micron-level metrology checks, and instant zero-jargon WhatsApp dispatch across the plant hierarchy.
             </p>
 
             <div className="aa-hero-cta-group">
               <button className="button button-primary aa-hero-primary-btn" onClick={onGoToLogin}>
-                <AppIcon name="rocket" size={17} /> Enter Plant Workstation
+                <AppIcon name="rocket" size={15} /> Enter Plant Workstation
               </button>
               <a href="#personas" className="button button-secondary aa-hero-secondary-btn">
-                <AppIcon name="operator" size={15} /> Select Your Persona
+                <AppIcon name="operator" size={14} /> Select Your Persona
               </a>
             </div>
 
@@ -169,11 +170,16 @@ export function LandingPage({
           {/* Visual Interactive Rotor Card */}
           <div className="aa-hero-visual-card">
             <div className="aa-hero-visual-top">
-              <div className="aa-visual-live-tag">
-                <span className="live-ping" />
-                <span>LIVE VISION PIPELINE</span>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#ef4444" }} />
+                <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#f59e0b" }} />
+                <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#10b981" }} />
+                <span style={{ fontFamily: "monospace", fontSize: "10px", color: "#a1a1aa", marginLeft: "5px" }}>cam-01/rotor_stream</span>
               </div>
-              <span className="aa-visual-model-tag">YOLOv8-SEG · 100 FPS</span>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <span className="live-ping" />
+                <span className="aa-visual-model-tag">YOLOv8-SEG · 100 FPS</span>
+              </div>
             </div>
 
             <div className="aa-visual-preview-stage">

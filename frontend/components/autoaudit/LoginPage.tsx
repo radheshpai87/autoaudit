@@ -61,9 +61,9 @@ export function LoginPage({
             <span className="aa-landing-badge-dot" />
             <span>ROLE-BASED ACCESS CONTROL · ISO 9001 COMPLIANT</span>
           </div>
-          <h1>Select Your Plant Workspace Persona</h1>
+          <h1>Plant Persona Portal</h1>
           <p>
-            Choose your designated station below. Dashboards, metric thresholds, and alert dispatches automatically tailor to your plant responsibilities.
+            Choose your designated station below. Workspaces, defect tolerances, and alert dispatches automatically tailor to your plant role.
           </p>
         </div>
 
@@ -93,14 +93,14 @@ export function LoginPage({
                 <div className="aa-login-card-info-row">
                   <span className="aa-login-dept">{user.department}</span>
                   <span className="aa-login-phone">
-                    <AppIcon name="phone" size={12} color="#059669" />
+                    <AppIcon name="phone" size={11} color="#34d399" />
                     {user.phone}
                   </span>
                 </div>
 
                 <div className="aa-login-summary-box">
                   <div className="aa-login-summary-label">
-                    <AppIcon name="sparkles" size={13} color="#2563eb" />
+                    <AppIcon name="sparkles" size={12} color="#60a5fa" />
                     <strong>Workspace Focus:</strong>
                   </div>
                   <p>{user.simpleSummary}</p>
@@ -115,7 +115,7 @@ export function LoginPage({
                     handleSelectAndLogin(roleKey);
                   }}
                 >
-                  <AppIcon name="bolt" size={14} /> Sign In as {user.name.split(" ")[0]}
+                  <AppIcon name="bolt" size={13} /> Sign In as {user.name.split(" ")[0]}
                 </button>
               </article>
             );
@@ -140,7 +140,7 @@ export function LoginPage({
               disabled={isSubmitting}
               onClick={() => handleSelectAndLogin(selectedRole)}
             >
-              <AppIcon name="rocket" size={16} /> Enter {USERS[selectedRole].roleTitle} Dashboard →
+              <AppIcon name="rocket" size={14} /> Enter {USERS[selectedRole].roleTitle} Dashboard →
             </button>
           </div>
         </div>

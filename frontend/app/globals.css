@@ -2484,16 +2484,23 @@ tbody tr:hover td {
    Full-Page Standalone Landing & Login Styles (Modern, Clean, High Contrast)
    ========================================================================== */
 
-/* Landing Page Standalone Root */
+/* Landing Page Standalone Root - Dark Engineering Aesthetic (matching SaaSRBAC / portfolio_modern) */
 .aa-landing-page-root {
   min-height: 100vh;
-  background: #f8fafc;
-  color: #0f172a;
+  background-color: #09090b;
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.14) 0%, transparent 65%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 32px 32px, 32px 32px;
+  color: #f4f4f5;
   display: flex;
   flex-direction: column;
-  font-family: var(--font-inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
+/* Sticky Dark Glass Navbar */
 .aa-landing-navbar {
   position: sticky;
   top: 0;
@@ -2501,41 +2508,43 @@ tbody tr:hover td {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 32px;
-  background: rgba(255, 255, 255, 0.88);
+  height: 54px;
+  padding: 0 32px;
+  background: rgba(9, 9, 11, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .aa-landing-nav-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .aa-brand-symbol {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-radius: 9px;
+  width: 30px;
+  height: 30px;
+  background: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: #3b82f6;
 }
 
 .aa-landing-nav-brand b {
-  font-size: 16px;
-  font-weight: 800;
-  color: #0f172a;
+  font-size: 13.5px;
+  font-weight: 750;
+  color: #ffffff;
   letter-spacing: -0.02em;
   display: block;
   line-height: 1.2;
 }
 
 .aa-landing-nav-brand small {
-  font-size: 11px;
-  color: #64748b;
+  font-size: 10px;
+  color: #71717a;
   font-weight: 600;
   letter-spacing: 0.3px;
   display: block;
@@ -2544,68 +2553,78 @@ tbody tr:hover td {
 .aa-landing-nav-links {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 22px;
 }
 
 .aa-landing-nav-links a {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: #475569;
+  font-size: 12px;
+  font-weight: 500;
+  color: #a1a1aa;
   text-decoration: none;
   transition: color 0.15s ease;
 }
 
 .aa-landing-nav-links a:hover {
-  color: #2563eb;
+  color: #ffffff;
 }
 
 .aa-landing-nav-cta {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 
 .aa-landing-status-badge {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #334155;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  padding: 5px 12px;
-  border-radius: 8px;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 550;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  padding: 3px 10px;
+  border-radius: 999px;
 }
 
 .aa-nav-signin-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-weight: 700;
-  font-size: 13px;
-  padding: 8px 16px;
-  border-radius: 8px;
+  gap: 5px;
+  font-weight: 650;
+  font-size: 12px;
+  height: 30px;
+  padding: 0 13px;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #09090b;
+  border: 1px solid #ffffff;
+  transition: all 0.15s ease;
 }
 
+.aa-nav-signin-btn:hover {
+  background: #e4e4e7;
+}
+
+/* Main Content Wrapper */
 .aa-landing-main-wrap {
   flex: 1;
-  max-width: 1240px;
+  max-width: 1140px;
   margin: 0 auto;
   width: 100%;
-  padding: 40px 24px 60px;
+  padding: 32px 24px 50px;
   display: flex;
   flex-direction: column;
-  gap: 64px;
+  gap: 48px;
 }
 
 /* Hero Section */
 .aa-landing-hero-section {
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
-  gap: 40px;
+  gap: 36px;
   align-items: center;
-  padding: 24px 0 10px;
+  padding: 16px 0 8px;
 }
 
 .aa-hero-content {
@@ -2614,85 +2633,135 @@ tbody tr:hover td {
   align-items: flex-start;
 }
 
+.aa-landing-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 12px;
+  background: rgba(39, 39, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.5px;
+  color: #93c5fd;
+  backdrop-blur: 8px;
+  margin-bottom: 14px;
+}
+
+.aa-landing-badge-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #3b82f6;
+  box-shadow: 0 0 8px #3b82f6;
+}
+
 .aa-landing-headline {
-  font-size: clamp(32px, 3.8vw, 46px);
-  font-weight: 850;
-  color: #0f172a;
-  line-height: 1.18;
-  letter-spacing: -0.03em;
-  margin: 16px 0 18px;
+  font-size: clamp(23px, 2.8vw, 32px);
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.22;
+  letter-spacing: -0.025em;
+  margin: 0 0 14px;
+  background: linear-gradient(135deg, #ffffff 0%, #e4e4e7 65%, #a1a1aa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .aa-landing-subhead {
-  font-size: 16px;
+  font-size: 13.5px;
   line-height: 1.6;
-  color: #475569;
-  margin: 0 0 28px;
-  max-width: 600px;
+  color: #a1a1aa;
+  margin: 0 0 22px;
+  max-width: 520px;
 }
 
 .aa-hero-cta-group {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 36px;
+  gap: 10px;
+  margin-bottom: 26px;
   flex-wrap: wrap;
 }
 
 .aa-hero-primary-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  font-weight: 750;
-  padding: 13px 24px;
-  border-radius: 10px;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 650;
+  height: 36px;
+  padding: 0 18px;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #09090b;
+  border: 1px solid #ffffff;
+  box-shadow: 0 2px 10px rgba(255, 255, 255, 0.12);
+  transition: all 0.15s ease;
+}
+
+.aa-hero-primary-btn:hover {
+  background: #e4e4e7;
+  transform: translateY(-1px);
 }
 
 .aa-hero-secondary-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14.5px;
-  font-weight: 650;
-  padding: 12px 20px;
-  border-radius: 10px;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 550;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: rgba(24, 24, 27, 0.8);
+  color: #d4d4d8;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.15s ease;
+}
+
+.aa-hero-secondary-btn:hover {
+  background: #27272a;
+  color: #ffffff;
 }
 
 .aa-hero-stats-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  gap: 14px;
   width: 100%;
-  padding-top: 24px;
-  border-top: 1px solid #e2e8f0;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .aa-hero-stat {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .aa-hero-stat b {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 800;
-  color: #0f172a;
+  color: #ffffff;
+  letter-spacing: -0.01em;
 }
 
 .aa-hero-stat span {
-  font-size: 12px;
-  color: #64748b;
-  font-weight: 600;
+  font-size: 10.5px;
+  color: #71717a;
+  font-weight: 550;
 }
 
 /* Visual Rotor Mockup Card */
 .aa-hero-visual-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.08);
+  background: rgba(18, 18, 22, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.7);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -2703,40 +2772,42 @@ tbody tr:hover td {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px;
-  border-bottom: 1px solid #f1f5f9;
-  background: #f8fafc;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(9, 9, 11, 0.6);
 }
 
 .aa-visual-live-tag {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  font-size: 11px;
-  font-weight: 800;
-  color: #059669;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #34d399;
 }
 
 .live-ping {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
 }
 
 .aa-visual-model-tag {
-  font-size: 11px;
-  font-weight: 700;
-  color: #2563eb;
-  background: #eff6ff;
-  padding: 3px 8px;
+  font-size: 10px;
+  font-mono: monospace;
+  font-weight: 600;
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.22);
+  padding: 2px 7px;
   border-radius: 5px;
 }
 
 .aa-visual-preview-stage {
-  height: 250px;
-  background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+  height: 220px;
+  background: radial-gradient(circle at center, #18181b 0%, #09090b 100%);
   display: grid;
   place-items: center;
   position: relative;
@@ -2750,18 +2821,18 @@ tbody tr:hover td {
   right: 0;
   height: 2px;
   background: linear-gradient(90deg, transparent, #38bdf8, #818cf8, transparent);
-  box-shadow: 0 0 12px #38bdf8;
+  box-shadow: 0 0 10px #38bdf8;
   animation: laserSweep 3.2s ease-in-out infinite alternate;
 }
 
 @keyframes laserSweep {
   0% { transform: translateY(10px); }
-  100% { transform: translateY(240px); }
+  100% { transform: translateY(210px); }
 }
 
 .aa-visual-rotor-graphic {
-  width: 190px;
-  height: 190px;
+  width: 170px;
+  height: 170px;
   position: relative;
 }
 
@@ -2769,54 +2840,54 @@ tbody tr:hover td {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: radial-gradient(circle, #475569 0%, #334155 60%, #1e293b 100%);
-  border: 4px solid #64748b;
+  background: radial-gradient(circle, #3f3f46 0%, #27272a 60%, #18181b 100%);
+  border: 3px solid #52525b;
   display: grid;
   place-items: center;
   position: relative;
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.7);
 }
 
 .aa-rotor-hat-circle {
-  width: 86px;
-  height: 86px;
+  width: 76px;
+  height: 76px;
   border-radius: 50%;
-  background: #1e293b;
-  border: 2px solid #475569;
+  background: #18181b;
+  border: 2px solid #3f3f46;
   display: grid;
   place-items: center;
   position: relative;
 }
 
 .aa-rotor-center-bore {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: #0f172a;
-  border: 1px solid #334155;
+  background: #09090b;
+  border: 1px solid #27272a;
 }
 
 .aa-rotor-bolt {
   position: absolute;
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: #94a3b8;
-  border: 1px solid #cbd5e1;
+  background: #a1a1aa;
+  border: 1px solid #d4d4d8;
 }
 
-.bolt-1 { top: 6px; }
-.bolt-2 { right: 8px; top: 28px; }
-.bolt-3 { right: 14px; bottom: 10px; }
-.bolt-4 { left: 14px; bottom: 10px; }
-.bolt-5 { left: 8px; top: 28px; }
+.bolt-1 { top: 5px; }
+.bolt-2 { right: 7px; top: 25px; }
+.bolt-3 { right: 12px; bottom: 8px; }
+.bolt-4 { left: 12px; bottom: 8px; }
+.bolt-5 { left: 7px; top: 25px; }
 
 .aa-detection-sample-box {
   position: absolute;
-  top: 24px;
-  right: 18px;
-  border: 2px solid #ef4444;
-  background: rgba(239, 68, 68, 0.15);
+  top: 20px;
+  right: 14px;
+  border: 1.5px solid #ef4444;
+  background: rgba(239, 68, 68, 0.18);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -2824,29 +2895,30 @@ tbody tr:hover td {
 .aa-detection-sample-box span {
   font-size: 8px;
   font-weight: 800;
-  color: #fee2e2;
-  letter-spacing: 0.4px;
+  color: #fecaca;
+  letter-spacing: 0.3px;
 }
 
 .aa-visual-meta-bar {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  padding: 14px 18px;
-  background: #ffffff;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(9, 9, 11, 0.75);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .aa-visual-meta-bar small {
-  font-size: 10px;
-  font-weight: 700;
-  color: #94a3b8;
-  letter-spacing: 0.5px;
+  font-size: 9.5px;
+  font-weight: 650;
+  color: #71717a;
+  letter-spacing: 0.4px;
   display: block;
 }
 
 .aa-visual-meta-bar b {
-  font-size: 12.5px;
-  color: #0f172a;
+  font-size: 11.5px;
+  color: #f4f4f5;
   display: block;
   margin-top: 2px;
 }
@@ -2855,50 +2927,52 @@ tbody tr:hover td {
 .aa-landing-section {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 22px;
 }
 
 .aa-section-title-wrap {
   text-align: center;
-  max-width: 680px;
+  max-width: 620px;
   margin: 0 auto;
 }
 
 .aa-section-title-wrap h2 {
-  font-size: 28px;
-  font-weight: 800;
-  color: #0f172a;
+  font-size: 20px;
+  font-weight: 750;
+  color: #ffffff;
   letter-spacing: -0.02em;
-  margin: 8px 0;
+  margin: 6px 0;
 }
 
 .aa-section-title-wrap p {
-  font-size: 14.5px;
-  color: #64748b;
+  font-size: 12.5px;
+  color: #a1a1aa;
   margin: 0;
 }
 
 .aa-pipeline-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 14px;
 }
 
 .aa-pipeline-card {
-  padding: 24px 22px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+  padding: 18px 16px;
+  background: rgba(18, 18, 22, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  gap: 10px;
+  transition: transform 0.18s ease, border-color 0.18s ease;
 }
 
 .aa-pipeline-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(24, 24, 27, 0.85);
 }
 
 .aa-pipeline-card-head {
@@ -2908,130 +2982,149 @@ tbody tr:hover td {
 }
 
 .aa-pipeline-num {
-  font-size: 12px;
-  font-weight: 800;
-  color: #2563eb;
-  background: #eff6ff;
-  padding: 3px 8px;
-  border-radius: 6px;
+  font-size: 11px;
+  font-mono: monospace;
+  font-weight: 750;
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.22);
+  padding: 2px 7px;
+  border-radius: 5px;
 }
 
 .aa-pipeline-icon {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
-  background: #f1f5f9;
-  border-radius: 10px;
+  width: 32px;
+  height: 32px;
+  background: rgba(39, 39, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: #3b82f6;
 }
 
 .aa-pipeline-tag {
-  font-size: 10px;
-  font-weight: 700;
-  color: #64748b;
-  letter-spacing: 0.5px;
+  font-size: 9.5px;
+  font-weight: 650;
+  color: #71717a;
+  letter-spacing: 0.4px;
 }
 
 .aa-pipeline-card h3 {
   margin: 0;
-  font-size: 16.5px;
-  font-weight: 750;
-  color: #0f172a;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
 }
 
 .aa-pipeline-card p {
   margin: 0;
-  font-size: 13.5px;
+  font-size: 12px;
   line-height: 1.55;
-  color: #475569;
+  color: #a1a1aa;
 }
 
 /* Roles Grid */
 .aa-roles-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
 }
 
 .aa-role-card {
-  padding: 24px 22px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+  padding: 18px 16px;
+  background: rgba(18, 18, 22, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  gap: 12px;
+  transition: transform 0.18s ease, border-color 0.18s ease;
 }
 
 .aa-role-card:hover {
-  transform: translateY(-3px);
-  border-color: #93c5fd;
-  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.08);
+  transform: translateY(-2px);
+  border-color: #3b82f6;
+  box-shadow: 0 8px 24px -6px rgba(59, 130, 246, 0.16);
 }
 
 .aa-role-card-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .aa-role-avatar-lg {
-  width: 44px;
-  height: 44px;
-  font-size: 16px;
+  width: 36px;
+  height: 36px;
+  font-size: 13px;
+  border-radius: 9px;
 }
 
 .aa-role-lvl-badge {
-  font-size: 10.5px;
+  font-size: 9.5px;
   font-weight: 700;
-  color: #2563eb;
+  color: #60a5fa;
   letter-spacing: 0.4px;
   display: block;
 }
 
 .aa-role-card-header h3 {
   margin: 0;
-  font-size: 15px;
-  font-weight: 800;
-  color: #0f172a;
+  font-size: 13.5px;
+  font-weight: 750;
+  color: #ffffff;
 }
 
 .aa-role-card-header b {
-  font-size: 12px;
-  color: #64748b;
-  font-weight: 600;
+  font-size: 11px;
+  color: #a1a1aa;
+  font-weight: 500;
   display: block;
 }
 
 .aa-role-card-phone {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #047857;
-  background: #ecfdf5;
-  padding: 4px 8px;
-  border-radius: 6px;
+  gap: 5px;
+  font-size: 10.5px;
+  font-mono: monospace;
+  font-weight: 650;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  padding: 3px 8px;
+  border-radius: 5px;
   width: fit-content;
 }
 
 .aa-role-card-highlight {
   margin: 0;
-  font-size: 13px;
+  font-size: 11.5px;
   line-height: 1.5;
-  color: #334155;
+  color: #a1a1aa;
   flex: 1;
 }
 
 .aa-role-enter-btn {
   width: 100%;
-  font-size: 13px;
-  font-weight: 750;
-  padding: 10px;
-  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 650;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 7px;
+  background: rgba(39, 39, 42, 0.9);
+  color: #f4f4f5;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: all 0.15s ease;
+}
+
+.aa-role-enter-btn:hover {
+  background: #ffffff;
+  color: #09090b;
+  border-color: #ffffff;
 }
 
 /* Specs Banner */
@@ -3039,35 +3132,44 @@ tbody tr:hover td {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 32px 36px;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  border-radius: 20px;
+  gap: 16px;
+  padding: 22px 24px;
+  background: rgba(18, 18, 22, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
   color: #ffffff;
   flex-wrap: wrap;
 }
 
 .aa-landing-specs-banner h3 {
-  margin: 0 0 6px;
-  font-size: 20px;
-  font-weight: 800;
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 750;
   color: #ffffff;
 }
 
 .aa-landing-specs-banner p {
   margin: 0;
-  font-size: 14px;
-  color: #94a3b8;
+  font-size: 12px;
+  color: #a1a1aa;
 }
 
 .aa-specs-cta {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  font-weight: 750;
-  font-size: 14px;
-  padding: 12px 22px;
-  border-radius: 10px;
+  gap: 6px;
+  font-weight: 650;
+  font-size: 12px;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #09090b;
+  border: 1px solid #ffffff;
+}
+
+.aa-specs-cta:hover {
+  background: #e4e4e7;
 }
 
 /* Footer */
@@ -3075,42 +3177,48 @@ tbody tr:hover td {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px 32px;
-  border-top: 1px solid #e2e8f0;
-  background: #ffffff;
-  font-size: 13px;
-  color: #64748b;
+  padding: 18px 32px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: #09090b;
+  font-size: 11.5px;
+  color: #71717a;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
 }
 
 .aa-landing-footer b {
-  color: #0f172a;
-  margin-right: 8px;
+  color: #f4f4f5;
+  margin-right: 6px;
 }
 
 /* ==========================================================================
-   Full-Page Standalone Login Page Styles
+   Full-Page Standalone Login Page Styles - Dark Engineering Aesthetic
    ========================================================================== */
 .aa-login-viewport {
   min-height: 100vh;
-  background: #090d16;
-  color: #e2e8f0;
+  background-color: #09090b;
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.16) 0%, transparent 65%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 32px 32px, 32px 32px;
+  color: #f4f4f5;
   display: flex;
   flex-direction: column;
   position: relative;
   overflow-x: hidden;
-  font-family: var(--font-inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 .aa-login-bg-glow {
   position: absolute;
-  top: -150px;
+  top: -120px;
   left: 50%;
   transform: translateX(-50%);
-  width: 900px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(37, 99, 235, 0.16) 0%, rgba(14, 165, 233, 0.08) 40%, transparent 70%);
+  width: 700px;
+  height: 380px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -3118,204 +3226,227 @@ tbody tr:hover td {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 36px;
-  border-bottom: 1px solid #1e293b;
+  height: 54px;
+  padding: 0 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   position: relative;
   z-index: 10;
+  background: rgba(9, 9, 11, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .aa-login-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .aa-login-logo-icon {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 10px;
+  width: 30px;
+  height: 30px;
+  background: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: #3b82f6;
 }
 
 .aa-login-brand b {
-  font-size: 16px;
-  font-weight: 800;
-  color: #f8fafc;
+  font-size: 13.5px;
+  font-weight: 750;
+  color: #ffffff;
   display: block;
   line-height: 1.2;
 }
 
 .aa-login-brand span {
-  font-size: 11px;
-  color: #94a3b8;
+  font-size: 10px;
+  color: #71717a;
   display: block;
 }
 
 .aa-login-back-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12.5px;
-  padding: 7px 14px;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 550;
+  height: 29px;
+  padding: 0 11px;
+  border-radius: 6px;
+  background: rgba(24, 24, 27, 0.8);
+  color: #d4d4d8;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.15s ease;
+}
+
+.aa-login-back-btn:hover {
+  background: #27272a;
+  color: #ffffff;
 }
 
 .aa-login-main {
   flex: 1;
-  max-width: 1200px;
+  max-width: 1080px;
   margin: 0 auto;
   width: 100%;
-  padding: 40px 24px 60px;
+  padding: 32px 24px 50px;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 26px;
   position: relative;
   z-index: 10;
 }
 
 .aa-login-header-text {
   text-align: center;
-  max-width: 720px;
+  max-width: 620px;
   margin: 0 auto;
 }
 
 .aa-login-pill {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 14px;
-  background: rgba(37, 99, 235, 0.15);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  gap: 6px;
+  padding: 4px 12px;
+  background: rgba(39, 39, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
-  color: #60a5fa;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.8px;
-  margin-bottom: 14px;
+  color: #93c5fd;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
 }
 
 .aa-login-header-text h1 {
-  font-size: clamp(28px, 3.5vw, 38px);
-  font-weight: 850;
-  color: #f8fafc;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-  margin: 0 0 12px;
+  font-size: clamp(21px, 2.5vw, 28px);
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.22;
+  letter-spacing: -0.025em;
+  margin: 0 0 8px;
+  background: linear-gradient(135deg, #ffffff 0%, #e4e4e7 65%, #a1a1aa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .aa-login-header-text p {
-  font-size: 15px;
+  font-size: 13px;
   line-height: 1.55;
-  color: #94a3b8;
+  color: #a1a1aa;
   margin: 0;
 }
 
 .aa-login-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
+  gap: 14px;
 }
 
 .aa-login-card {
-  background: #111827;
-  border: 1px solid #1f2937;
-  border-radius: 18px;
-  padding: 24px 20px;
+  background: rgba(18, 18, 22, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px 14px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 11px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
   position: relative;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .aa-login-card:hover {
-  border-color: #3b82f6;
-  background: #151f32;
-  transform: translateY(-3px);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(24, 24, 27, 0.9);
+  transform: translateY(-2px);
 }
 
 .aa-login-card.selected {
-  border-color: #60a5fa;
-  background: #16243d;
-  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.35);
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
+  box-shadow: 0 0 20px -5px rgba(59, 130, 246, 0.35);
 }
 
 .aa-login-card-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .aa-login-avatar {
-  width: 46px;
-  height: 46px;
-  font-size: 17px;
+  width: 36px;
+  height: 36px;
+  font-size: 13px;
+  border-radius: 9px;
 }
 
 .aa-login-card-titles {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .aa-login-role-tag {
-  font-size: 10px;
-  font-weight: 800;
-  color: #38bdf8;
-  letter-spacing: 0.5px;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #60a5fa;
+  letter-spacing: 0.4px;
 }
 
 .aa-login-card-titles h3 {
   margin: 0;
-  font-size: 16px;
-  font-weight: 800;
-  color: #f8fafc;
+  font-size: 13.5px;
+  font-weight: 750;
+  color: #ffffff;
 }
 
 .aa-login-card-titles b {
-  font-size: 12px;
-  color: #94a3b8;
-  font-weight: 600;
+  font-size: 11px;
+  color: #a1a1aa;
+  font-weight: 500;
 }
 
 .aa-login-card-info-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
-  background: #0b101c;
-  border-radius: 8px;
-  border: 1px solid #1e293b;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
   gap: 6px;
 }
 
 .aa-login-dept {
-  font-size: 11px;
-  color: #cbd5e1;
-  font-weight: 600;
+  font-size: 10.5px;
+  color: #a1a1aa;
+  font-weight: 550;
 }
 
 .aa-login-phone {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 10px;
+  font-mono: monospace;
+  font-weight: 650;
   color: #34d399;
 }
 
 .aa-login-summary-box {
-  background: #0f172a;
-  border-radius: 8px;
-  padding: 10px 12px;
-  border: 1px solid #1e293b;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 6px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   flex: 1;
 }
 
@@ -3323,27 +3454,45 @@ tbody tr:hover td {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 11px;
+  font-size: 10px;
+  font-weight: 650;
   color: #93c5fd;
 }
 
 .aa-login-summary-box p {
   margin: 0;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.5;
-  color: #94a3b8;
+  color: #a1a1aa;
 }
 
 .aa-login-action-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  font-weight: 750;
-  font-size: 13px;
-  padding: 11px;
-  border-radius: 10px;
+  gap: 5px;
+  font-weight: 650;
+  font-size: 11.5px;
+  height: 32px;
+  border-radius: 7px;
   width: 100%;
+}
+
+.aa-login-card.selected .aa-login-action-btn {
+  background: #ffffff;
+  color: #09090b;
+  border: 1px solid #ffffff;
+}
+
+.aa-login-card:not(.selected) .aa-login-action-btn {
+  background: rgba(39, 39, 42, 0.8);
+  color: #d4d4d8;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.aa-login-card:not(.selected) .aa-login-action-btn:hover {
+  background: #27272a;
+  color: #ffffff;
 }
 
 /* Footer Card */
@@ -3351,79 +3500,92 @@ tbody tr:hover td {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  background: #111827;
-  border: 1px solid #1f2937;
-  border-radius: 16px;
+  padding: 14px 20px;
+  background: rgba(18, 18, 22, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 12px;
 }
 
 .aa-login-active-preview {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .aa-login-avatar-sm {
-  width: 36px;
-  height: 36px;
-  font-size: 13px;
+  width: 32px;
+  height: 32px;
+  font-size: 12px;
+  border-radius: 8px;
 }
 
 .aa-login-active-preview span {
-  font-size: 11px;
-  color: #64748b;
+  font-size: 10.5px;
+  color: #71717a;
   display: block;
 }
 
 .aa-login-active-preview b {
-  font-size: 14px;
-  color: #f8fafc;
+  font-size: 12.5px;
+  color: #f4f4f5;
+  font-weight: 700;
 }
 
 .aa-login-submit-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 750;
-  padding: 12px 24px;
-  border-radius: 10px;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 650;
+  height: 34px;
+  padding: 0 18px;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #09090b;
+  border: 1px solid #ffffff;
+  box-shadow: 0 2px 10px rgba(255, 255, 255, 0.12);
+  transition: all 0.15s ease;
+}
+
+.aa-login-submit-btn:hover {
+  background: #e4e4e7;
+  transform: translateY(-1px);
 }
 
 .aa-login-system-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 36px;
-  border-top: 1px solid #1e293b;
-  background: #090d16;
-  font-size: 12px;
-  color: #64748b;
+  padding: 14px 32px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: #09090b;
+  font-size: 11px;
+  color: #71717a;
 }
 
 .aa-login-status-tag {
   color: #38bdf8;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 /* ==========================================================================
    Streamlined Non-Text-Heavy Dashboard Briefing Card
    ========================================================================== */
 .aa-briefing-summary-card {
-  background: #f8fafc;
+  background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 12px 16px;
-  margin-bottom: 14px;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
 }
 
 .aa-briefing-summary-card p {
   margin: 0;
-  font-size: 13.5px;
+  font-size: 12px;
   line-height: 1.5;
-  color: #1e293b;
+  color: #334155;
 }
 
 .aa-briefing-summary-card b {
@@ -3435,7 +3597,7 @@ tbody tr:hover td {
     grid-template-columns: 1fr;
   }
   .aa-landing-navbar {
-    padding: 12px 18px;
+    padding: 0 16px;
   }
   .aa-landing-nav-links {
     display: none;
