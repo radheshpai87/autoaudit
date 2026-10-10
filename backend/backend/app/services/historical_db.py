@@ -25,8 +25,14 @@ DB_PATH = os.path.join(DB_DIR, "inspection_history.db")
 def _database_url() -> str:
     configured = settings.DATABASE_URL or os.getenv("DATABASE_URL")
     if not configured:
-        os.makedirs(DB_DIR, exist_ok=True)
-        return f"sqlite:///{DB_PATH}"
+        target_dir = "/app/data" if os.path.isdir("/app") and not os.path.isdir(DB_DIR) else DB_DIR
+        os.makedirs(target_dir, exist_ok=True)
+        return f"sqlite:///{os.path.join(target_dir, 'inspection_history.db')}"
+    if configured.startswith("sqlite:///"):
+        sqlite_file = configured.replace("sqlite:///", "")
+        db_parent = os.path.dirname(sqlite_file)
+        if db_parent:
+            os.makedirs(db_parent, exist_ok=True)
     # Render, Heroku, and some secret stores commonly provide postgres:// URLs.
     if configured.startswith("postgres://"):
         configured = "postgresql://" + configured[len("postgres://"):]

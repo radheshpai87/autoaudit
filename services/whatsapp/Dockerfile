@@ -25,6 +25,6 @@ ENV WHATSAPP_PORT=3001
 ENV WHATSAPP_HOST=0.0.0.0
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- http://localhost:3001/status 2>&1 | grep -q '"directory"' || exit 1
+  CMD wget -qO- http://127.0.0.1:3001/health 2>&1 | grep -q '"healthy"' || exit 1
 
 CMD ["node", "server.js"]

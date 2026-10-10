@@ -133,6 +133,10 @@ async function startBaileys() {
   }
 }
 
+app.get("/health", (_req, res) => {
+  res.json({ status: "healthy", service: "whatsapp" });
+});
+
 app.get("/status", authorized, (_req, res) => {
   res.json({ isConnected, qrDataUrl, directory: DIRECTORY, senderMatchesExpected });
 });
