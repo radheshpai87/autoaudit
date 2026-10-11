@@ -59,7 +59,7 @@ export function LoginPage({
       desc: "Spindle vibration drift, polar wear heatmaps, proactive insert replacement.",
     },
     {
-      key: "plant_manager" as UserRole,
+      key: "manager" as UserRole,
       level: "Level 4",
       icon: BarChart3,
       badge: "Executive Oversight",

@@ -117,7 +117,7 @@ export function LandingPage({
       color: "amber",
     },
     {
-      role: "plant_manager" as UserRole,
+      role: "manager" as UserRole,
       level: "Level 4",
       tag: "Executive Governance",
       name: "Anand Verma",
