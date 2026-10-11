@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Image from "next/image";
-import { USERS, type UserRole } from "../../lib/auth";
-import type { ViewName } from "./Views";
+import type { UserRole } from "../../lib/auth";
 import {
   ShieldCheck,
   Disc3,
@@ -12,10 +11,12 @@ import {
   Ruler,
   Smartphone,
   ArrowRight,
-  ChevronRight,
-  Factory,
   Sparkles,
-  User,
+  Wrench,
+  BarChart3,
+  AlertTriangle,
+  Cpu,
+  FileCheck2,
 } from "lucide-react";
 
 interface LandingPageProps {
@@ -25,35 +26,14 @@ interface LandingPageProps {
   inferenceMode: string;
 }
 
-interface PlantPersona {
-  key: UserRole;
-  tierLevel: string;
-  tierTag: string;
-  department: string;
-  station: string;
-  name: string;
-  title: string;
-  avatar: string;
-  phone: string;
-  mission: string;
-  ownedKpis: Array<{ label: string; target: string }>;
-  workstationView: ViewName;
-  workstationTitle: string;
-  sampleEscalation: {
-    trigger: string;
-    message: string;
-  };
-}
-
 export function LandingPage({
   onGoToLogin,
   onSelectRoleAndEnter,
   backendOnline,
   inferenceMode,
 }: LandingPageProps) {
-  const [selectedRoleFilter, setSelectedRoleFilter] = useState<UserRole | "all">("all");
 
-  const steps = [
+  const pipelineSteps = [
     {
       num: "01",
       icon: Camera,
@@ -84,169 +64,106 @@ export function LandingPage({
     },
   ];
 
-  const plantPersonas: PlantPersona[] = [
+  const personas = [
     {
-      key: "operator",
-      tierLevel: "LEVEL 1",
-      tierTag: "TACTICAL FLOOR EXECUTION",
-      department: "Production Line 1 · Final Assembly",
-      station: "Station 04 · High-Speed Optical Gate",
+      role: "operator" as UserRole,
+      level: "Level 1",
+      tag: "Tactical Gating",
       name: "Rajesh Kumar",
       title: "Plant Floor Operator",
       avatar: "RK",
-      phone: "+91 90251 76336",
-      mission: "Executes continuous conveyor throughput, performs sub-second Go / No-Go optical triage, and routes non-conforming parts into automated sorting chutes.",
-      ownedKpis: [
-        { label: "Station Takt Time", target: "< 1.2s" },
-        { label: "Zero-Defect Escapes", target: "100.0%" },
-        { label: "Chute Accuracy", target: "99.9%" },
+      station: "Station 04 · High-Speed Optical Gate",
+      summary: "Performs instant Go / No-Go triage at conveyor speed with high-visibility traffic lights and automated pneumatic scrap chutes.",
+      kpis: [
+        { label: "Station Takt", value: "< 1.2s" },
+        { label: "Escape Rate", value: "0.0%" },
+        { label: "Chute Accuracy", value: "99.9%" },
       ],
-      workstationView: "Operator Station",
-      workstationTitle: "Operator Station (Go / No-Go Traffic Lights & Audible Chutes)",
-      sampleEscalation: {
-        trigger: "Consecutive Reject Spike",
-        message: "DISPATCH [STN-04]: 3 consecutive rotors flagged for surface scoring. Check pneumatic conveyor guides immediately.",
-      },
+      icon: Disc3,
+      color: "blue",
     },
     {
-      key: "quality_engineer",
-      tierLevel: "LEVEL 2",
-      tierTag: "METROLOGY & DEFECT ASSURANCE",
-      department: "Metrology & Standards Laboratory",
-      station: "Station 06 · AI Vision Inspection Studio",
+      role: "quality_engineer" as UserRole,
+      level: "Level 2",
+      tag: "Defect & Metrology Lab",
       name: "Priya Sharma",
       title: "Quality Assurance Engineer",
       avatar: "PS",
-      phone: "+91 77368 31052",
-      mission: "Performs deep AI defect classification, inspects microscopic crack segmentations, validates disc thickness variation (DTV) against micron tolerances, and dispatches quarantine dispositions.",
-      ownedKpis: [
-        { label: "First-Pass Yield (FPY)", target: "≥ 95.0%" },
-        { label: "Defect PPM", target: "< 50 PPM" },
-        { label: "Metrology Runout (DTV)", target: "≤ 5.0 µm" },
+      station: "Station 06 · AI Metrology Studio",
+      summary: "Analyzes deep polygon segmentations, validates micron-level disc thickness variation (DTV ≤ 5 µm), and signs off quarantine lots.",
+      kpis: [
+        { label: "First-Pass Yield", value: "≥ 95.0%" },
+        { label: "Defect PPM", value: "< 50 PPM" },
+        { label: "DTV Runout", value: "≤ 5.0 µm" },
       ],
-      workstationView: "AI Inspection Studio",
-      workstationTitle: "AI Inspection Studio & Human Review Quarantine Queue",
-      sampleEscalation: {
-        trigger: "Critical Structural Defect Flagged",
-        message: "QA ESCALATION: Severe Thermal Crack (94.2% conf) on Rotor #340-9281. Quarantined in Bin C for metrology sign-off.",
-      },
+      icon: ShieldCheck,
+      color: "emerald",
     },
     {
-      key: "maintenance",
-      tierLevel: "LEVEL 3",
-      tierTag: "PLANT RELIABILITY & ASSET CARE",
-      department: "Plant Reliability & CNC Tooling Bay",
-      station: "Station 02 · Rough & Finish CNC Lathe Bay",
+      role: "maintenance" as UserRole,
+      level: "Level 3",
+      tag: "Tooling & Predictive Health",
       name: "Vikram Singh",
-      title: "Lead Tooling & Maintenance Specialist",
+      title: "Lead Tooling & Maintenance",
       avatar: "VS",
-      phone: "+91 89513 49166",
-      mission: "Monitors spindle vibration drift, analyzes polar rotor wear heatmaps, and executes preventative tool insert changes before mechanical drift causes defective batches.",
-      ownedKpis: [
-        { label: "MTBF (Mean Time Between Failures)", target: "> 450 hrs" },
-        { label: "Spindle Runout Drift", target: "< 8.0 µm" },
-        { label: "Tool Insert Cycle Life", target: "98.5%" },
+      station: "Station 02 · CNC Lathe & Spindle Cell",
+      summary: "Monitors spindle vibration drift and polar wear heatmaps. Receives early WhatsApp alerts to swap worn inserts before bulk failure.",
+      kpis: [
+        { label: "MTBF Target", value: "≥ 450 hrs" },
+        { label: "Spindle Runout", value: "< 8.0 µm" },
+        { label: "Tool Cycle Life", value: "98.5%" },
       ],
-      workstationView: "Fault Intelligence Board",
-      workstationTitle: "Fault Intelligence Board & Spindle Vibration Diagnostics",
-      sampleEscalation: {
-        trigger: "Predictive Tool Wear Drift Anomaly",
-        message: "PREDICTIVE ALERT: Lathe CNC-04 lateral runout drifting (+8.4µm). Replace carbide insert #C-2 at next cycle.",
-      },
+      icon: Wrench,
+      color: "amber",
     },
     {
-      key: "manager",
-      tierLevel: "LEVEL 4",
-      tierTag: "STRATEGIC PLANT GOVERNANCE",
-      department: "Executive Plant Operations",
-      station: "Central Plant Command Center",
+      role: "plant_manager" as UserRole,
+      level: "Level 4",
+      tag: "Executive Governance",
       name: "Anand Verma",
       title: "Plant Operations Director",
       avatar: "AV",
-      phone: "+91 82961 02292",
-      mission: "Directs multi-line manufacturing performance, monitors plant-wide OEE and First-Pass Yield vs 95% SLA, mitigates scrap financial loss, and verifies IATF 16949 audit compliance.",
-      ownedKpis: [
-        { label: "Overall Plant FPY", target: "≥ 95.0% Target" },
-        { label: "Plant OEE Index", target: "≥ 88.0%" },
-        { label: "Audit Trail Compliance", target: "100.0%" },
+      station: "Executive Control Room · Operations",
+      summary: "Tracks plant-wide First-Pass Yield (FPY), cumulative scrap dollar savings, shift volume targets, and IATF 16949 audit compliance.",
+      kpis: [
+        { label: "Plant Target FPY", value: "≥ 95.0%" },
+        { label: "Plant OEE Index", value: "≥ 88.0%" },
+        { label: "Audit Compliance", value: "100.0%" },
       ],
-      workstationView: "Main Dashboard",
-      workstationTitle: "Executive Operations Dashboard & Shift Briefing Matrix",
-      sampleEscalation: {
-        trigger: "Shift Completion & Yield Wrap-up",
-        message: "SHIFT BRIEF: Shift A finished. 1,420 rotors inspected. Plant FPY: 96.4%. Scrap cost avoided: $1,840. All lines nominal.",
-      },
+      icon: BarChart3,
+      color: "indigo",
     },
   ];
-
-  const closedLoopStages = [
-    {
-      step: "01",
-      roleTitle: "Line Operator",
-      stageTitle: "Floor Triage & Gating",
-      tag: "TAKT TIME < 1.2s",
-      desc: "Optical conveyor camera captures rotor; sub-second YOLO inference renders green/red traffic light. Suspect part is diverted into physical quarantine chute without stopping line.",
-    },
-    {
-      step: "02",
-      roleTitle: "QA Engineer",
-      stageTitle: "Deep Metrology & Verification",
-      tag: "≤ 5.0 µm DTV CHECK",
-      desc: "Microscopic defect polygons and Disc Thickness Variation (DTV) are measured. Structural crack severity is graded, and disposition (Scrap vs Rework vs Release) is officially logged.",
-    },
-    {
-      step: "03",
-      roleTitle: "Maintenance Lead",
-      stageTitle: "Predictive Tool Recalibration",
-      tag: "EARLY VIBRATION WARNING",
-      desc: "Polar wear heatmaps correlate recurring defects with Spindle #4 vibration drift. Technician receives instant WhatsApp dispatch to swap worn carbide insert before bulk failure.",
-    },
-    {
-      step: "04",
-      roleTitle: "Plant Director",
-      stageTitle: "Executive Yield & Governance",
-      tag: "FPY ≥ 95% SLA AUDIT",
-      desc: "Plain-language shift briefing calculates total scrap dollars saved, First-Pass Yield trends across all lines, and generates tamper-proof IATF 16949 compliance audit certificates.",
-    },
-  ];
-
-  const displayedPersonas =
-    selectedRoleFilter === "all"
-      ? plantPersonas
-      : plantPersonas.filter((p) => p.key === selectedRoleFilter);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans selection:bg-blue-600 selection:text-white">
-      {/* Top Floating Navbar */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200/80 transition-all duration-200">
+      {/* Top Navbar */}
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Brand */}
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
-              <Disc3 className="w-5 h-5 animate-spin" style={{ animationDuration: "12s" }} />
+              <Disc3 className="w-5 h-5" />
             </div>
             <div>
               <div className="font-extrabold text-sm tracking-tight text-slate-900 leading-none">
                 AutoAudit <span className="text-blue-600">AI</span>
               </div>
-              <span className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider">
-                Brake Quality Gate
+              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                Automated Quality Control
               </span>
             </div>
           </div>
 
-          {/* Nav Links */}
+          {/* Navigation Links */}
           <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-slate-600">
             <a href="#pipeline" className="hover:text-blue-600 transition-colors">
-              Quality Pipeline
+              Inspection Pipeline
             </a>
-            <a href="#personas" className="hover:text-blue-600 transition-colors">
-              Plant Personas
+            <a href="#workstations" className="hover:text-blue-600 transition-colors">
+              Plant Workstations
             </a>
-            <a href="#closed-loop" className="hover:text-blue-600 transition-colors">
-              Closed-Loop Flow
-            </a>
-            <a href="#specs" className="hover:text-blue-600 transition-colors">
+            <a href="#specifications" className="hover:text-blue-600 transition-colors">
               Specifications
             </a>
           </nav>
@@ -255,136 +172,147 @@ export function LandingPage({
           <div className="flex items-center gap-3">
             <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>{backendOnline ? `AI Online (${inferenceMode.toUpperCase()})` : "Standalone Edge"}</span>
+              <span>{backendOnline ? `AI Online (${inferenceMode.toUpperCase()})` : "Standalone Edge Mode"}</span>
             </div>
             <button
               onClick={onGoToLogin}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all duration-150 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-colors cursor-pointer"
             >
-              <span>Sign In to Portal</span>
-              <ChevronRight className="w-3.5 h-3.5" />
+              <span>Launch Workstation</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16 space-y-20">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-16 space-y-20">
         {/* Hero Section */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-4">
           <div className="lg:col-span-7 space-y-6">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
               <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-              <span>INDUSTRY 4.0 · AUTOMATED COMPUTER VISION</span>
+              <span>INDUSTRY 4.0 · AUTOMATED COMPUTER VISION GATE</span>
             </div>
 
-            <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">
-              Automated Vision Inspection. <br />
-              <span className="text-blue-600">Intelligent Quality Gate</span> for Brake Discs.
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight">
+              Sub-Second Optical Inspection for <br />
+              <span className="text-blue-600">Automotive Brake Rotors</span>.
             </h1>
 
-            <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-xl">
-              Sub-second neural defect segmentation, micron-level metrology checks, and instant zero-jargon WhatsApp dispatch across the plant hierarchy.
+            <p className="text-sm sm:text-base text-slate-600 max-w-xl leading-relaxed">
+              Real-time YOLOv8 neural defect segmentation, micron-level metrology validation (DTV ≤ 5 µm), and closed-loop plain-English WhatsApp dispatch across the plant hierarchy.
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <button
                 onClick={onGoToLogin}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-md transition-all cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all duration-150 cursor-pointer"
               >
-                <span>Enter Plant Workstation</span>
+                <span>Enter Plant Workstations</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
               <a
-                href="#personas"
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-semibold text-xs shadow-2xs transition-all cursor-pointer"
+                href="#workstations"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 shadow-2xs transition-all duration-150"
               >
-                <User className="w-4 h-4 text-slate-500" />
-                <span>Explore Plant Personas</span>
+                <span>Explore Plant Roles</span>
               </a>
             </div>
 
-            {/* 4 Micro Stats */}
+            {/* Metric Chips */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-slate-200">
-              <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
-                <div className="text-lg font-black text-slate-900">&lt; 1.0s</div>
-                <div className="text-[11px] font-medium text-slate-600">Inference Time</div>
+              <div className="bg-white p-3.5 rounded-xl border border-slate-200">
+                <span className="text-xl font-black text-slate-900">&lt; 1.0s</span>
+                <p className="text-[11px] text-slate-500 font-medium mt-0.5">Inference Takt</p>
               </div>
-              <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
-                <div className="text-lg font-black text-slate-900">≤ 5 µm</div>
-                <div className="text-[11px] font-medium text-slate-600">DTV Tolerance</div>
+              <div className="bg-white p-3.5 rounded-xl border border-slate-200">
+                <span className="text-xl font-black text-slate-900">≤ 5 µm</span>
+                <p className="text-[11px] text-slate-500 font-medium mt-0.5">DTV Tolerance</p>
               </div>
-              <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
-                <div className="text-lg font-black text-slate-900">4 Tiers</div>
-                <div className="text-[11px] font-medium text-slate-600">Plant Roles</div>
+              <div className="bg-white p-3.5 rounded-xl border border-slate-200">
+                <span className="text-xl font-black text-slate-900">4 Tiers</span>
+                <p className="text-[11px] text-slate-500 font-medium mt-0.5">Plant Personas</p>
               </div>
-              <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
-                <div className="text-lg font-black text-slate-900">100%</div>
-                <div className="text-[11px] font-medium text-slate-600">Audit Trail</div>
+              <div className="bg-white p-3.5 rounded-xl border border-slate-200">
+                <span className="text-xl font-black text-slate-900">100%</span>
+                <p className="text-[11px] text-slate-500 font-medium mt-0.5">Digital Audit Trail</p>
               </div>
             </div>
           </div>
 
-          {/* Interactive Inspection Card */}
+          {/* Right: Modern Inspection Terminal Preview Card */}
           <div className="lg:col-span-5">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden">
+              {/* Terminal Window Header */}
+              <div className="bg-slate-900 px-4 py-3 flex items-center justify-between text-white border-b border-slate-800">
                 <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="font-mono text-slate-600">cam-01 / live_stream</span>
+                  <div className="flex gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                  </div>
+                  <span className="text-xs font-mono text-slate-300 ml-2">CAM-01 · HIGH-SPEED GATE</span>
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-semibold font-mono bg-blue-100 text-blue-700">
-                  YOLOv8-SEG · 100 FPS
-                </span>
+                <div className="flex items-center gap-2 text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>YOLOv8-SEG · 100 FPS</span>
+                </div>
               </div>
 
-              {/* Real Sample Rotor Image Preview */}
-              <div className="relative aspect-4/3 bg-slate-900 overflow-hidden flex items-center justify-center">
+              {/* Viewport with Rotor Inspection */}
+              <div className="relative bg-slate-950 aspect-square max-h-[340px] flex items-center justify-center overflow-hidden">
                 <Image
-                  src="/samples/sample_rotor_crack.jpg"
-                  alt="Live Brake Rotor Inspection"
-                  width={600}
-                  height={450}
-                  className="w-full h-full object-cover opacity-90"
+                  src="/samples/sample_rotor_scratch.jpg"
+                  alt="Industrial Brake Rotor Optical Inspection Feed"
+                  width={640}
+                  height={640}
+                  className="w-full h-full object-contain"
                   priority
                 />
 
-                {/* Laser Sweep Overlay */}
-                <div className="absolute inset-0 bg-linear-to-b from-transparent via-blue-500/20 to-transparent pointer-events-none animate-pulse" />
+                {/* Simulated Laser Scan Line */}
+                <div
+                  className="absolute inset-x-0 h-0.5 bg-blue-400 shadow-[0_0_12px_#38bdf8] pointer-events-none opacity-80 animate-pulse"
+                  style={{ top: "45%" }}
+                />
 
-                {/* Simulated YOLO Detection Box */}
-                <div className="absolute top-1/4 right-1/4 border-2 border-rose-500 bg-rose-500/20 rounded px-2 py-1 shadow-lg">
-                  <span className="text-[10px] font-mono font-bold text-white bg-rose-600 px-1.5 py-0.5 rounded">
-                    THERMAL CRACK · 94.2%
-                  </span>
+                {/* Defect Bounding Tag */}
+                <div
+                  className="absolute border-2 border-rose-500 bg-rose-500/10 rounded-xs pointer-events-none flex flex-col justify-between"
+                  style={{ left: "48%", top: "66%", width: "35%", height: "18%" }}
+                >
+                  <div className="bg-rose-600 text-white text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-br-xs self-start flex items-center gap-1 shadow-sm">
+                    <AlertTriangle className="w-2.5 h-2.5" />
+                    <span>SURFACE SCORING · 94.6%</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="p-4 grid grid-cols-3 gap-2 bg-white text-xs border-t border-slate-100">
-                <div>
-                  <div className="text-[10px] font-bold text-slate-600 uppercase">Part Type</div>
-                  <div className="font-semibold text-slate-900">Rotor 340mm</div>
+              {/* Telemetry Footer */}
+              <div className="p-4 bg-slate-50 border-t border-slate-200 grid grid-cols-3 gap-2 text-center text-xs">
+                <div className="bg-white p-2 rounded-lg border border-slate-200">
+                  <span className="text-[10px] text-slate-500 font-semibold block">COMPONENT</span>
+                  <span className="font-bold text-slate-800 font-mono text-[11px]">Rotor 340mm</span>
                 </div>
-                <div>
-                  <div className="text-[10px] font-bold text-slate-600 uppercase">Verdict</div>
-                  <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">
-                    REJECT · CRACK
-                  </span>
+                <div className="bg-white p-2 rounded-lg border border-slate-200">
+                  <span className="text-[10px] text-slate-500 font-semibold block">QA VERDICT</span>
+                  <span className="font-bold text-rose-600 font-mono text-[11px]">REJECT & STOP</span>
                 </div>
-                <div>
-                  <div className="text-[10px] font-bold text-slate-600 uppercase">Metrology</div>
-                  <div className="font-mono font-semibold text-slate-900">DTV 4.8 µm</div>
+                <div className="bg-white p-2 rounded-lg border border-slate-200">
+                  <span className="text-[10px] text-slate-500 font-semibold block">DTV RUNOUT</span>
+                  <span className="font-bold text-slate-800 font-mono text-[11px]">4.2 µm (≤ 5 µm)</span>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* 4 Steps Quality Pipeline */}
-        <section id="pipeline" className="space-y-8">
+        {/* Four-Step Quality Pipeline */}
+        <section id="pipeline" className="space-y-6 pt-8">
           <div className="text-center max-w-2xl mx-auto space-y-2">
-            <span className="text-xs font-bold font-mono tracking-wider text-blue-600 uppercase">
-              End-to-End Pipeline
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
+              End-to-End Manufacturing Workflow
             </span>
             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
               Four-Step Brake Quality Pipeline
@@ -395,33 +323,27 @@ export function LandingPage({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {steps.map((st) => {
-              const IconComp = st.icon;
+            {pipelineSteps.map((step) => {
+              const IconComp = step.icon;
               return (
                 <div
-                  key={st.num}
-                  className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                  key={step.num}
+                  className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between space-y-4"
                 >
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                        <IconComp className="w-5 h-5" />
+                      <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                        <IconComp className="w-4 h-4" />
                       </div>
-                      <span className="text-xs font-mono font-bold text-slate-600">
-                        {st.num}
-                      </span>
+                      <span className="text-xs font-mono font-bold text-slate-400">{step.num}</span>
                     </div>
                     <div>
-                      <span className="inline-block px-2 py-0.5 rounded text-[9px] font-bold font-mono bg-slate-100 text-slate-600 mb-1">
-                        {st.tag}
+                      <span className="text-[9px] font-bold tracking-wider text-blue-600 uppercase block mb-1">
+                        {step.tag}
                       </span>
-                      <h3 className="text-sm font-bold text-slate-900">
-                        {st.title}
-                      </h3>
+                      <h3 className="text-sm font-bold text-slate-900">{step.title}</h3>
                     </div>
-                    <p className="text-xs text-slate-600 leading-relaxed">
-                      {st.desc}
-                    </p>
+                    <p className="text-xs text-slate-600 leading-relaxed">{step.desc}</p>
                   </div>
                 </div>
               );
@@ -429,235 +351,141 @@ export function LandingPage({
           </div>
         </section>
 
-        {/* Plant Personas Section */}
-        <section id="personas" className="space-y-8">
+        {/* Plant Personas Section ("Engineered for Every Plant Tier") */}
+        <section id="workstations" className="space-y-6 pt-8">
           <div className="text-center max-w-2xl mx-auto space-y-2">
-            <span className="text-xs font-bold font-mono tracking-wider text-blue-600 uppercase">
-              ISA-95 Plant Architecture
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
+              ISA-95 Role-Based Architecture
             </span>
             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              Role-Based Plant Governance Hierarchy
+              Dedicated Workstations for Every Plant Tier
             </h2>
             <p className="text-xs sm:text-sm text-slate-600">
-              Tailored workspaces, role-specific KPI ownership, strict access boundaries, and direct WhatsApp escalation channels.
-            </p>
-          </div>
-
-          {/* Interactive Hierarchy Filter Bar */}
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <button
-              onClick={() => setSelectedRoleFilter("all")}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                selectedRoleFilter === "all"
-                  ? "bg-blue-600 text-white shadow-xs"
-                  : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
-              }`}
-            >
-              All 4 Operational Tiers
-            </button>
-            {plantPersonas.map((p) => (
-              <button
-                key={p.key}
-                onClick={() => setSelectedRoleFilter(p.key)}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                  selectedRoleFilter === p.key
-                    ? "bg-blue-600 text-white shadow-xs"
-                    : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
-                }`}
-              >
-                {p.tierLevel}: {p.name.split(" ")[0]} ({p.title.replace("Plant ", "").replace("Lead ", "")})
-              </button>
-            ))}
-          </div>
-
-          {/* 4 Persona Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-            {displayedPersonas.map((p) => {
-              const user = USERS[p.key];
-              return (
-                <div
-                  key={p.key}
-                  className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs hover:shadow-lg transition-all duration-200 flex flex-col justify-between space-y-4"
-                >
-                  <div className="space-y-4">
-                    {/* Header */}
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-blue-50 text-blue-700 border border-blue-200">
-                        {p.tierLevel}
-                      </span>
-                      <span className="text-[10px] font-mono text-slate-600 truncate">
-                        {p.station.split("·")[0]}
-                      </span>
-                    </div>
-
-                    {/* Profile */}
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                        {user.avatar}
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="text-sm font-bold text-slate-900 truncate">
-                          {p.name}
-                        </h3>
-                        <p className="text-[11px] font-semibold text-blue-600 truncate">
-                          {p.title}
-                        </p>
-                        <p className="text-[10px] text-slate-600 truncate">
-                          {p.department.split("·")[0]}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Mission */}
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-600 leading-relaxed">
-                      <strong className="block text-[10px] uppercase font-bold text-slate-600 mb-1">
-                        Operational Mandate
-                      </strong>
-                      {p.mission}
-                    </div>
-
-                    {/* KPIs */}
-                    <div className="space-y-1.5">
-                      <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">
-                        Owned Plant KPIs
-                      </span>
-                      <div className="space-y-1">
-                        {p.ownedKpis.map((kpi, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs"
-                          >
-                            <span className="text-slate-600 text-[11px]">{kpi.label}</span>
-                            <span className="font-mono font-bold text-slate-900 text-[11px]">{kpi.target}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* WhatsApp Channel */}
-                    <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-2">
-                      <div className="flex items-center justify-between text-xs text-emerald-800">
-                        <div className="flex items-center gap-1.5 font-bold">
-                          <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>WhatsApp Alert</span>
-                        </div>
-                        <span className="font-mono text-[10px] text-emerald-700">{p.phone}</span>
-                      </div>
-                      <div className="p-2 rounded-lg bg-white border border-emerald-100 text-[11px] font-mono text-slate-800 leading-snug">
-                        <span className="block text-[9px] font-bold text-amber-700 mb-0.5">
-                          TRIGGER: {p.sampleEscalation.trigger}
-                        </span>
-                        &ldquo;{p.sampleEscalation.message}&rdquo;
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Launch CTA */}
-                  <div className="pt-2">
-                    <button
-                      onClick={() => onSelectRoleAndEnter(p.key)}
-                      className="w-full py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-blue-600 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <span>Sign In as {p.name.split(" ")[0]} ({p.title.split(" ")[0]})</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Closed-Loop Quality Control Flow */}
-        <section id="closed-loop" className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm space-y-8">
-          <div className="text-center max-w-2xl mx-auto space-y-2">
-            <span className="text-xs font-bold font-mono tracking-wider text-blue-600 uppercase">
-              Closed-Loop Control
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              How Roles Interlock in Real Time
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-600">
-              When a defect occurs, AutoAudit triggers an automated closed-loop escalation chain connecting floor execution directly to executive governance.
+              Tailored views, defect tolerances, and alert dispatches engineered specifically for each factory persona.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {closedLoopStages.map((stage) => (
-              <div
-                key={stage.step}
-                className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-blue-100 text-blue-700">
-                    Stage {stage.step}
-                  </span>
-                  <span className="text-[10px] font-bold font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    {stage.tag}
-                  </span>
+            {personas.map((p) => {
+              const IconComp = p.icon;
+              return (
+                <div
+                  key={p.role}
+                  className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-4"
+                >
+                  <div className="space-y-3">
+                    {/* Header Pill & Level */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                        {p.level}
+                      </span>
+                      <span className="text-[10px] font-semibold text-blue-600">{p.tag}</span>
+                    </div>
+
+                    {/* Persona Identity */}
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                        {p.avatar}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-bold text-slate-900 truncate">{p.name}</h3>
+                        <p className="text-xs text-slate-500 truncate">{p.title}</p>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-600 leading-relaxed">{p.summary}</p>
+
+                    {/* Owned KPIs */}
+                    <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                        Assigned KPIs
+                      </span>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {p.kpis.map((kpi, idx) => (
+                          <div key={idx} className="bg-slate-50 p-1.5 rounded-lg text-center border border-slate-100">
+                            <span className="text-[9px] text-slate-500 block truncate">{kpi.label}</span>
+                            <span className="text-[10px] font-bold text-slate-900">{kpi.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 1-Click Launch Button */}
+                  <button
+                    onClick={() => onSelectRoleAndEnter(p.role)}
+                    className="w-full py-2 px-3 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-blue-600 text-white shadow-2xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Launch as {p.name.split(" ")[0]}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-                <div>
-                  <span className="text-[11px] font-semibold text-slate-600 block">
-                    {stage.roleTitle}
-                  </span>
-                  <h3 className="text-sm font-bold text-slate-900">
-                    {stage.stageTitle}
-                  </h3>
-                </div>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  {stage.desc}
-                </p>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Specifications & Compliance Grid */}
+        <section id="specifications" className="space-y-6 pt-8">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
+              Enterprise Specifications
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              Production-Grade Machine Standards
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600">
+              Engineered for continuous automotive assembly lines operating at full line speed.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-4 bg-white rounded-xl border border-slate-200 flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <Cpu className="w-4 h-4" />
               </div>
-            ))}
-          </div>
-        </section>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900">Sub-Second Edge AI</h4>
+                <p className="text-[11px] text-slate-600 mt-0.5">YOLOv8 deep vision engine operating at full conveyor line speed.</p>
+              </div>
+            </div>
 
-        {/* Standards Banner */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-4 bg-white rounded-xl border border-slate-200 flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-              <Factory className="w-4 h-4" />
+            <div className="p-4 bg-white rounded-xl border border-slate-200 flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <Ruler className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900">Micron Metrology</h4>
+                <p className="text-[11px] text-slate-600 mt-0.5">Precise DTV (≤ 5 µm) and lateral runout tolerance gating.</p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-xs font-bold text-slate-900">ISA-95 Architecture</h4>
-              <p className="text-[11px] text-slate-600">Full vertical enterprise integration from floor sensors to ERP.</p>
+
+            <div className="p-4 bg-white rounded-xl border border-slate-200 flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <Smartphone className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900">Autonomous WhatsApp</h4>
+                <p className="text-[11px] text-slate-600 mt-0.5">Targeted zero-jargon directives dispatched directly to mobiles.</p>
+              </div>
             </div>
-          </div>
-          <div className="p-4 bg-white rounded-xl border border-slate-200 flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-              <Smartphone className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-slate-900">Autonomous WhatsApp</h4>
-              <p className="text-[11px] text-slate-600">Targeted zero-jargon directives dispatched directly to mobiles.</p>
-            </div>
-          </div>
-          <div className="p-4 bg-white rounded-xl border border-slate-200 flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-slate-900">IATF 16949 / ISO 9001</h4>
-              <p className="text-[11px] text-slate-600">Permanent digital traceability and tamper-proof calibration logs.</p>
-            </div>
-          </div>
-          <div className="p-4 bg-white rounded-xl border border-slate-200 flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-              <Zap className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-slate-900">Sub-Second Edge AI</h4>
-              <p className="text-[11px] text-slate-600">YOLOv8 deep vision engine operating at full conveyor line speed.</p>
+
+            <div className="p-4 bg-white rounded-xl border border-slate-200 flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <FileCheck2 className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900">IATF 16949 / ISO 9001</h4>
+                <p className="text-[11px] text-slate-600 mt-0.5">Permanent digital traceability and tamper-proof calibration logs.</p>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* CTA Banner */}
-        <section id="specs" className="bg-slate-900 text-white rounded-3xl p-8 sm:p-10 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl">
+        {/* Bottom CTA Banner */}
+        <section className="bg-slate-900 text-white rounded-3xl p-8 sm:p-10 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl">
           <div className="space-y-2">
-            <h3 className="text-xl sm:text-2xl font-black tracking-tight">
-              Ready for High-Speed Automotive Manufacturing?
-            </h3>
+            <h3 className="text-xl sm:text-2xl font-black tracking-tight">Ready for High-Speed Automotive Manufacturing?</h3>
             <p className="text-xs sm:text-sm text-slate-400 max-w-xl">
               Precision quality gating engineered for brake discs, drums, clutch plates, and rotational castings.
             </p>
@@ -672,13 +500,13 @@ export function LandingPage({
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white py-8">
+      {/* Clean Footer */}
+      <footer className="border-t border-slate-200 bg-white py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-600">
           <div className="flex items-center gap-2">
             <Disc3 className="w-4 h-4 text-blue-600" />
             <span className="font-bold text-slate-900">AutoAudit AI</span>
-            <span>— Automated Manufacturing Quality Intelligence · 2026</span>
+            <span>— Automated Manufacturing Quality Intelligence</span>
           </div>
           <button
             onClick={onGoToLogin}
